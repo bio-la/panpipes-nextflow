@@ -27,7 +27,7 @@ sample_prefix:
 unfiltered_obj: 
 # if running this on prefiltered datat then
 #1. set unfiltered obj (above) to blank
-#2. rename your filtered file to match, the format PARAMS['sample_prefix'] + '_filt.h5ad'
+#2. rename your filtered file to match, the format PARAMS['sample_prefix'] + '.h5mu'
 #3. put renamed file in the same folder as this yml.
 
 #TO DO this needs to go i think it doesn't make sense to save this file.
@@ -171,11 +171,11 @@ plotqc:
 hvg:
   # there is a defaul exclusions file for immune cells in sc_pipelines/resources/exclude_genes_HLAIGTR_v1.txt
   # examine this to see what format is expected, if you want to use this file set the parameter to "default
-  exclude: default
+  exclude: True
   exclude_file: panpipes/resources/qc_genelist_1.0.csv
 
   flavor: seurat_v3 # "seurat", "cell_ranger", "seurat_v3"
-  n_top_genes: 2000
+  n_top_genes: 3500
   min_mean:
   max_mean:
   min_disp:
@@ -213,7 +213,7 @@ prot:
   # more details in this vignette https://muon.readthedocs.io/en/latest/omics/citeseq.html
   # dsb https://muon.readthedocs.io/en/latest/api/generated/muon.prot.pp.dsb.html
   # clr https://muon.readthedocs.io/en/latest/api/generated/muon.prot.pp.clr.html
-  normalisation_methods: clr,dsb
+  normalisation_methods: clr
   # the normalised matrices are stored in layers called 'clr' and 'dsb', along with a layer called 'raw_counts' 
   # if you choose to run both then 'dsb' is stored in X as default.
   # In downstream visualisation, you can either specify the layer, or take the default.
