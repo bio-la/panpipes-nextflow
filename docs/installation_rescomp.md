@@ -61,7 +61,7 @@ git clone https://github.com/DendrouLab/panpipes
 cd panpipes
 pip install .
 ```
-OR if you anticipate doing development on panpipes:
+OR if you anticipate doing development on panpipes (but you will need to have setuptoools > 64.0.0) :
 ```
 pip install --editable .
 ```
