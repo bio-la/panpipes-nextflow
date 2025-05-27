@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
-include { preprocess } from 'modules/spatial_preprocessing/preprocess.nf'
+include { preprocess } from './modules/spatial_preprocessing/preprocess.nf'
 include { concatenate } from './modules/spatial_preprocessing/concatenate.nf'
 
 workflow {
