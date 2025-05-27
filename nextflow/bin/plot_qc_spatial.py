@@ -32,7 +32,7 @@ parser.add_argument("--input_spatialdata",
                     default="spatialdata_unfilt.h5mu",
                     help="")
 parser.add_argument("--figdir",
-                    default="./figures/",
+                    default="./figures/spatial",
                     help="path to save the figures to")
 parser.add_argument("--spatial_filetype",
                     default="",
@@ -50,13 +50,16 @@ args, opt = parser.parse_known_args()
 
 L.info("Running with params: %s", args)
 
+
 figdir = args.figdir
 
-# if not os.path.exists(figdir):
-#     os.mkdir(figdir)
+if not os.path.exists(figdir):
+     os.mkdir(figdir)
 
 sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
+
+
 
 L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
 sdata = sd.read_zarr(args.input_spatialdata)
@@ -69,6 +72,7 @@ match = re.search(pattern, input_data)
 if match is None:
     match = re.search(r"_unfilt.zarr", input_data)
 sprefix = input_data[:match.start()]
+
 
 # convert string to list of strings
 qc_metrics = list(args.spatial_qc_metrics.split(","))
