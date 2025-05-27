@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Concatenate spatial transcriptomics data
 '''

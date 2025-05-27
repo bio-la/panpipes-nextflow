@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 ## Filtering mudata based on n_genes, percent mito and min cells/
 ## originally written by Tom Thomas (https://github.com/tomthomas3000/TAURUS)
 ## adapted and augmented for this pipeline by Charlotte Rich-Griffin 2020-09-30

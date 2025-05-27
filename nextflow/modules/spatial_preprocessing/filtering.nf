@@ -15,7 +15,7 @@ process filter_spatialdata {
     path "logs/${sample}_filtering.log", emit: log
 
     script:
-    def py_path = "$baseDir/python_scripts"
+    def py_path = "./bin"
     def filter_dict = params.filtering 
     def keep_barcodes = params.filtering_keep_barcodes ? "--keep_barcodes ${params.filtering_keep_barcodes}" : ""
     """

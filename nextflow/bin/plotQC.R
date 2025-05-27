@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # plotting utilities for qc 
 suppressPackageStartupMessages({
   library(tidyverse)

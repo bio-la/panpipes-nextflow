@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import pandas as pd
 import scanpy as sc
 import argparse
