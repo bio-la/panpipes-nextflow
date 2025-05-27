@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 install.packages("systemfonts", dependencies = TRUE)
 cran_packages <- c("optparse", "foreign","clustree","remotes", "table")
 for (pp in cran_packages){

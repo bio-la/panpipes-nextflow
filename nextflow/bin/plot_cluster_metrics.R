@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # Plot cluster metrics based on clusters from python/run_clustering.py
 # Script originally written by Fabiola Curion, adapted to take python outputs by Charlotte Rich-Griffin
 ####

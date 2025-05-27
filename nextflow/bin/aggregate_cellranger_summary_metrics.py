@@ -1,4 +1,4 @@
-#!/bin/py
+#!/usr/bin/env python
 # aggregate_cellranger.py
 
 # takes cellranger multi outputs and cellranger count outputs, and makes them consistent for plotting.

@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # Clustree diagram from aggregated cluster data.
 # Script originally written by Fabiola Curion, adapted by Charlotte Rich-Griffin
 ####
