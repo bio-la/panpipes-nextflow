@@ -2,25 +2,31 @@
 nextflow.enable.dsl=2
 
 process plot {
+    tag "$sample"
 
-    publishDir '/Users/sarah/Documents/ICB/Panpipes/15.nextflow/preprocess_spatial', mode: 'copy'
+    publishDir "$outdir_path", mode: 'copy', pattern="figures/spatial/*.png"
 
     input:
-        val sample
+        tuple path(filtered_zarr_path), val(sample)
         val spatial_filetype
         val grouping_var
         val spatial_qc_metrics
-
+        path outdir_path
+        
     output:
-        path './figures/spatial'
+        path "figures/spatial/*.png"
 
     script:
     """
-    python plot_qc_spatial.py  \
-             --input_spatialdata /Users/sarah/Documents/ICB/Panpipes/15.nextflow/preprocess_spatial/preprocessed.data/$sample-filtered.zarr  \
+    mkdir logs
+    echo 'Output dir is: $outdir_path'
+
+    python ${workflow.projectDir}/bin/plot_qc_spatial.py  \
+             --input_spatialdata $filtered_zarr_path  \
              --spatial_filetype $spatial_filetype \
-             --grouping_var $grouping_var \
-             --spatial_qc_metrics $spatial_qc_metrics
+             --grouping_var "${grouping_var}" \
+             --spatial_qc_metrics "${spatial_qc_metrics}" \
+            > logs/$sample-postfilter-plot.log
     """
 }
 
