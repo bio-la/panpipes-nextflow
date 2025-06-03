@@ -2,6 +2,12 @@
 nextflow.enable.dsl=2
 
 
-workflow PANPIPES {
-    def input_ch = Channel.fromPath(params.input)
+
+/*Spatial Preprocessing Modules*/
+include {spatial_preprocess} from './subworkflows/spatial_preprocessing.nf'
+
+
+workflow {
+    spatial_preprocess()
+    
 }
