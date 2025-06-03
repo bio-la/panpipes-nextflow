@@ -23,11 +23,12 @@ process preprocess {
         path "$sample-preprocessed.zarr"
 
     script:
+    def spatial_norm_hvg_flavour = norm_hvg_flavour != 'None' ? " --norm_hvg_flavour ${norm_hvg_flavour}" : ''
     """
     python run_preprocess_spatial.py --input_spatialdata /Users/sarah/Documents/ICB/Panpipes/15.nextflow/preprocess_spatial/preprocessed.data/$sample-filtered.zarr \
             --output_spatialdata $sample-preprocessed.zarr \
             --figdir ./figures \
-            --norm_hvg_flavour $norm_hvg_flavour --filter_by_hvg $filter_by_hvg --hvg_batch_key $hvg_batch_key --squidpy_hvg_flavour $squidpy_hvg_flavour \
+            $spatial_norm_hvg_flavour --filter_by_hvg $filter_by_hvg --hvg_batch_key $hvg_batch_key --squidpy_hvg_flavour $squidpy_hvg_flavour \
             --min_mean $min_mean --max_mean $max_mean --min_disp $min_disp --theta $theta --clip $clip \
             --n_pcs $n_pcs
 
