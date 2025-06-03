@@ -8,7 +8,8 @@ process filter {
     publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "tables/$sample-filtered_cell_counts.csv"
     publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "tables/$sample-filtered_cell_metadata.tsv"
 
-
+    container 'mari3ga/panpipes-preprocessing:latest'
+    
     input:
         tuple path(input_zarr), val(sample)
         val filter_dict

@@ -4,8 +4,9 @@ nextflow.enable.dsl=2
 process plot {
     tag "$sample"
 
-    publishDir "$outdir_path", mode: 'copy', pattern="figures/spatial/*.png"
+    publishDir "$outdir_path", mode: 'copy', pattern: "figures/spatial/*.png"
 
+    container 'mari3ga/panpipes-preprocessing:latest'
     input:
         tuple path(filtered_zarr_path), val(sample)
         val spatial_filetype
