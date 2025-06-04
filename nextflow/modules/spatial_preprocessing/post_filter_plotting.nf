@@ -6,6 +6,7 @@ process plot {
 
     publishDir "$outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
 
+    container 'mari3ga/panpipes-preprocessing:latest'
     input:
         tuple path(filtered_zarr_path), val(sample)
         val spatial_filetype
