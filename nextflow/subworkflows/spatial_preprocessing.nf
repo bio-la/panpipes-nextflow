@@ -22,10 +22,17 @@ workflow spatial_preprocess {
     if (params.run_filtering == 'True') {
         filtered_zarr_ch = filter(inputs,params.filter_dict, params.keep_barcodes, params.outdir_path).filtered_zarr_ch
         plot(filtered_zarr_ch, params.spatial_filetype, params.grouping_var, params.spatial_qc_metrics, params.outdir_path)
+
+        /* Run Preprocessing */
+        preprocess(filtered_zarr_ch, params.norm_hvg_flavour, params.n_top_genes, params.filter_by_hvg,
+                    params.hvg_batch_key, params.squidpy_hvg_flavour, params.min_mean,
+                    params.max_mean, params.min_disp, params.theta, params.clip,
+                    params.n_pcs) 
+
     }
 
     /* Run Preprocessing */
-    preprocess(samples, params.norm_hvg_flavour, params.n_top_genes, params.filter_by_hvg,
+    preprocess(inputs, params.norm_hvg_flavour, params.n_top_genes, params.filter_by_hvg,
                         params.hvg_batch_key, params.squidpy_hvg_flavour, params.min_mean,
                         params.max_mean, params.min_disp, params.theta, params.clip,
                         params.n_pcs) 
