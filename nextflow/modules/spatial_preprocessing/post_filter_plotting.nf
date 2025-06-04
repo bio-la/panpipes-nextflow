@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process plot {
     tag "$sample"
 
-    publishDir "$outdir_path", mode: 'copy', pattern="figures/spatial/*.png"
+    publishDir "$outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
 
     input:
         tuple path(filtered_zarr_path), val(sample)
@@ -19,7 +19,6 @@ process plot {
     script:
     """
     mkdir logs
-    echo 'Output dir is: $outdir_path'
 
     python ${workflow.projectDir}/bin/plot_qc_spatial.py  \
              --input_spatialdata $filtered_zarr_path  \
