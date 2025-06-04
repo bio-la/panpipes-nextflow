@@ -29,13 +29,15 @@ workflow spatial_preprocess {
                     params.max_mean, params.min_disp, params.theta, params.clip,
                     params.n_pcs) 
 
-    }
-
-    /* Run Preprocessing */
+    }else{
+        /* Run Preprocessing */
     preprocess(inputs, params.norm_hvg_flavour, params.n_top_genes, params.filter_by_hvg,
                         params.hvg_batch_key, params.squidpy_hvg_flavour, params.min_mean,
                         params.max_mean, params.min_disp, params.theta, params.clip,
                         params.n_pcs) 
+    }
+
+    
 
     /* Run Concatenation */
     
