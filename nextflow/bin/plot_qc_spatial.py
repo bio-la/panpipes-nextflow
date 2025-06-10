@@ -33,6 +33,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--input_spatialdata",
                     default="spatialdata_unfilt.h5mu",
                     help="")
+parser.add_argument("--sample_id",
+                    default="Sample1",
+                    help="")
 parser.add_argument("--figdir",
                     default="figures/spatial",
                     help="path to save the figures to")
@@ -63,15 +66,6 @@ sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsi
 
 L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
 sdata = sd.read_zarr(args.input_spatialdata)
-#mdata = mu.read(args.input_spatialdata)
-#spatial = mdata.mod['spatial']
-
-input_data = os.path.basename(args.input_spatialdata)
-pattern = r"-filtered.zarr"
-match = re.search(pattern, input_data)
-if match is None:
-    match = re.search(r"-unfilt.zarr", input_data)
-sprefix = input_data[:match.start()]
 
 L.info(sdata["table"])
 
@@ -108,15 +102,15 @@ for metric in qc_metrics:
             L.info("Creating violin plot for '%s' of .obs" % metric)
             if group_var is None: 
                 sc.pl.violin(sdata["table"], keys = metric, xlabel = metric+ " in .obs",
-                            save =  "_obs_" + metric+ "_" + "."+sprefix + ".png", show = False)
+                            save =  "_obs_" + metric+ "_" + "."+args.sample_id + ".png", show = False)
             
             else: #plot violin for each group
                 for group in group_var: 
                     sc.pl.violin(sdata["table"], keys = metric,groupby = group, xlabel = group + ", "+ metric+ " in .obs",
-                            save = "_obs_" + metric+ "_" + group+ "."+sprefix +".png", show = False)
+                            save = "_obs_" + metric+ "_" + group+ "."+args.sample_id +".png", show = False)
             #plot spatial 
             L.info("Creating spatial embedding plot for '%s' of .obs" % metric)
-            sc.pl.embedding(sdata["table"],basis="spatial", color = metric, save = "_spatial_" + metric + "."+sprefix +".png", show = False)
+            sc.pl.embedding(sdata["table"],basis="spatial", color = metric, save = "_spatial_" + metric + "."+args.sample_id +".png", show = False)
 
     #check if in adata.var: 
     if metric in sdata["table"].var.columns:
@@ -131,7 +125,7 @@ for metric in qc_metrics:
                     orient='vertical', 
                 )
             ax.set(xlabel=metric+ " in .var" )
-            ax.figure.savefig(figdir + "/" +"violin_var_" + metric + "."+sprefix +".png")
+            ax.figure.savefig(figdir + "/" +"violin_var_" + metric + "."+args.sample_id +".png")
 
 
 
@@ -170,7 +164,7 @@ if args.spatial_filetype == "vizgen":
 
     plt.tight_layout()  # Ensures proper spacing between subplots
     #plt.savefig("merfish_histo.png", dpi=300)
-    plt.savefig(figdir + "/histograms."+sprefix +".png", dpi=300)  # Adjust dpi as needed
+    plt.savefig(figdir + "/histograms."+args.sample_id +".png", dpi=300)  # Adjust dpi as needed
     plt.close()  # Close the figure to free up memory
      
            

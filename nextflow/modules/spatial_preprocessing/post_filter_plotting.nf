@@ -5,8 +5,9 @@ process plot {
     tag "$sample"
 
     publishDir "$outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
+    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-postfilter-plot.log"
 
-    container 'mari3ga/panpipes-preprocessing:latest'
+    /*container 'mari3ga/panpipes-preprocessing:latest'*/
     input:
         tuple path(filtered_zarr_path), val(sample)
         val spatial_filetype
@@ -16,13 +17,14 @@ process plot {
         
     output:
         path "figures/spatial/*.png"
+        path "logs/$sample-postfilter-plot.log"
 
     script:
     """
     mkdir logs
 
     python ${workflow.projectDir}/bin/plot_qc_spatial.py  \
-             --input_spatialdata $filtered_zarr_path  \
+             --input_spatialdata $filtered_zarr_path  --sample_id $sample\
              --spatial_filetype $spatial_filetype \
              --grouping_var "${grouping_var}" \
              --spatial_qc_metrics "${spatial_qc_metrics}" \

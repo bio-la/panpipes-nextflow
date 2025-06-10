@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Preprocess spatial transcriptomics data
 '''
@@ -25,7 +26,7 @@ L.addHandler(log_handler)
 L.debug("testing logger works")
 
 
-from panpipes.funcs.scmethods import X_is_raw
+from funcs.scmethods import X_is_raw
 
 
 sc.settings.verbosity = 3
@@ -35,15 +36,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--input_spatialdata",
                     default="spatialdata_unfilt.h5mu",
                     help="")
+parser.add_argument("--sample_id",
+                    default="Sample1",
+                    help="")
 parser.add_argument("--output_spatialdata",
                     default="spatialdata_unfilt.h5mu",
                     help="")
 parser.add_argument("--figdir",
-                    default="./figures/",
+                    default="figures/spatial/",
                     help="path to save the figures to")
 
 parser.add_argument("--norm_hvg_flavour",
-                    default=None,
+                    default="squidpy",
                     help="how to normalize the data and perform HVG selection, either 'squidpy' or 'seurat'")
 parser.add_argument("--n_top_genes",
                     default=2000,
@@ -83,21 +87,18 @@ L.info("Running with params: %s", args)
 
 figdir = args.figdir
 
-if not os.path.exists(figdir):
-    os.mkdir(figdir)
+if args.hvg_batch_key == "None":
+    hvg_batch_key = None
+
+
+os.makedirs(figdir, exist_ok=True)
+os.makedirs("./preprocessed.data", exist_ok=True)
 
 sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
 
 L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
 sdata = sd.read_zarr(args.input_spatialdata)
-#mdata = mu.read(args.input_spatialdata)
-#spatial = mdata.mod['spatial']
-
-input_data = os.path.basename(args.input_spatialdata)
-pattern = r"_filtered.zarr"
-match = re.search(pattern, input_data)
-sprefix = input_data[:match.start()]
 
 
 # check if raw data is available
@@ -119,7 +120,7 @@ if args.norm_hvg_flavour == "squidpy":
     if args.squidpy_hvg_flavour == "seurat_v3":
         L.info("Running HVG selection with flavor seurat_v3")
         sc.pp.highly_variable_genes(sdata["table"], flavor="seurat_v3", n_top_genes=int(args.n_top_genes), subset=args.filter_by_hvg,
-                                    batch_key=args.hvg_batch_key)
+                                    batch_key=hvg_batch_key)
         L.info("Log-normalizing data")
         sc.pp.normalize_total(sdata["table"])
         sc.pp.log1p(sdata["table"])
@@ -131,11 +132,11 @@ if args.norm_hvg_flavour == "squidpy":
         sc.pp.highly_variable_genes(sdata["table"], flavor=args.squidpy_hvg_flavour,
                                     min_mean=float(args.min_mean),
                                     max_mean=float(args.max_mean),
-                                    min_disp=float(args.min_disp), subset=args.filter_by_hvg, batch_key=args.hvg_batch_key)
+                                    min_disp=float(args.min_disp), subset=args.filter_by_hvg, batch_key=hvg_batch_key)
     L.info("Saving log-normalized counts to .layers['lognorm']")
     sdata["table"].layers["lognorm"] = sdata["table"].X.copy()
     # plot HVGs:
-    sc.pl.highly_variable_genes(sdata["table"], show=False, save="_genes_highlyvar" + "."+ sprefix+ ".png")
+    sc.pl.highly_variable_genes(sdata["table"], show=False, save="_genes_highlyvar" + "."+ args.sample_id+ ".png")
 
 elif args.norm_hvg_flavour == "seurat":
     if args.clip is None:
@@ -148,7 +149,7 @@ elif args.norm_hvg_flavour == "seurat":
         clip = float(args.clip)
     L.info("Running Pearson Residuals HVG selection")
     sce.pp.highly_variable_genes(sdata["table"], theta=float(args.theta), clip=clip, n_top_genes=int(args.n_top_genes),
-                                 batch_key=args.hvg_batch_key, flavor='pearson_residuals',
+                                 batch_key=hvg_batch_key, flavor='pearson_residuals',
                                  layer="raw_counts", subset=args.filter_by_hvg)
     L.info("Running Pearson Residuals normalization")
     sce.pp.normalize_pearson_residuals(sdata["table"], theta=float(args.theta), clip=clip, layer="raw_counts")
@@ -163,13 +164,12 @@ if "highly_variable" in sdata["table"].var:
     L.info("You have %s Highly Variable Features", np.sum(sdata["table"].var.highly_variable))
 
 
-
 #PCA
 L.info("Running PCA")
 sc.pp.pca(sdata["table"], n_comps=int(args.n_pcs), svd_solver='arpack', random_state=0)
 L.info("Plotting PCA")
-sc.pl.pca(sdata["table"], save = "_vars" + "."+ sprefix+".png")
-sc.pl.pca_variance_ratio(sdata["table"], log=True, n_pcs=int(args.n_pcs), save= "."+ sprefix+".png")
+sc.pl.pca(sdata["table"], save = "_vars" + "."+ args.sample_id+".png")
+sc.pl.pca_variance_ratio(sdata["table"], log=True, n_pcs=int(args.n_pcs), save= "."+ args.sample_id+".png")
 
 
         
