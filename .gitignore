@@ -168,3 +168,8 @@ cython_debug/
 panpipes/.DS_Store
 .DS_Store
 *.code-workspace
+
+#Nextflow 
+.nextflow/
+work/
+mari_config.config
