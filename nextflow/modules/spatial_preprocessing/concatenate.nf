@@ -2,18 +2,24 @@
 nextflow.enable.dsl=2
 
 process concatenate {
+    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "concatenated.data/concatenated.zarr"
+    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "logs/concatenation.log"
 
-    publishDir '/Users/sarah/Documents/ICB/Panpipes/15.nextflow/preprocess_spatial/concatenated.data', mode: 'copy'
-
+    /*container 'mari3ga/panpipes-preprocessing:latest'*/
     input:
         path samples
+        path outdir_path
 
     output:
-        path "concatenated.zarr"
+        path "concatenated.data/concatenated.zarr"
+        path "logs/concatenation.log"
 
     script:
     """
-    python concatenation_spatial.py 
+    mkdir -p logs
+
+    python ${workflow.projectDir}/bin/concatenation_spatial.py --input_dirs '${samples}' \
+            > logs/concatenation.log
     """
 }
 
