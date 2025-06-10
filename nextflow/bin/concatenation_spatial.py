@@ -29,7 +29,7 @@ sc.settings.verbosity = 3
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument("--input_dir",
+parser.add_argument("--input_dirs",
                     default="./tmp/",
                     help="")
 parser.add_argument("--output_dir",
@@ -46,9 +46,11 @@ L.info("Running with params: %s", args)
 if not os.path.exists(args.output_dir):
     os.mkdir(args.output_dir)
 
-L.info("Reading in all SpatialDatas from '%s'" % args.input_dir)
+input_dirs = args.input_dirs.split(" ")
+
+L.info("Reading in all SpatialDatas from %s" % args.input_dirs)
 sdatas = []
-for file in glob.glob(glob.escape(args.input_dir) + "/*.zarr"):
+for file in input_dirs:
     sdatas.append(sd.read_zarr(file))
 
 sdata = sd.concatenate(sdatas, concatenate_tables=True)
