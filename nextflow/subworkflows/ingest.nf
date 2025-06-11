@@ -5,11 +5,13 @@ include { aggregate_metrics } from '../modules/ingest/aggregate_metrics.nf'
 workflow ingest {
 
     take:
-    inputA
+    submission_file
+    resources
+    
 
     main:
-    aggregate_metrics(inputA)
+    aggregate_metrics(submission_file,resources)
 
     emit:
-    resultA = aggregate_metrics.out.resultA
+    tenx_metrics = aggregate_metrics.out.tenx_metrics
 }

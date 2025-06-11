@@ -171,5 +171,4 @@ panpipes/.DS_Store
 
 #Nextflow 
 .nextflow/
-work/
-mari_config.config
+nextflow/work/

@@ -5,10 +5,14 @@ nextflow.enable.dsl=2
 include {spatial_preprocess} from './subworkflows/spatial_preprocessing.nf'
 include {ingest} from './subworkflows/ingest.nf'
 include {preprocessing} from './subworkflows/preprocessing.nf'
+
 workflow {
-     input_ch = Channel.fromPath(params.input)
+    Channel.fromPath(params.submission_file).set { submission_file_ch }
+    Channel.fromPath(params.resources).set { resources_dir_ch }
+
+
     //spatial_preprocess()
-    ingest(input_ch)
-    preprocessing(ingest.out.resultA)
+    ingest(submission_file_ch, resources_dir_ch)
+    preprocessing(ingest.out.tenx_metrics)
     
 }
