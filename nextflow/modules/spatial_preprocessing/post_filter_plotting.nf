@@ -4,8 +4,8 @@ nextflow.enable.dsl=2
 process plot {
     tag "$sample"
 
-    publishDir "$outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
-    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-postfilter-plot.log"
+    publishDir "$params.outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-postfilter-plot.log"
 
     /*container 'mari3ga/panpipes-preprocessing:latest'*/
     input:
@@ -13,7 +13,6 @@ process plot {
         val spatial_filetype
         val grouping_var
         val spatial_qc_metrics
-        path outdir_path
         
     output:
         path "figures/spatial/*.png"

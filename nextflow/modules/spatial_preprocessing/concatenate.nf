@@ -2,13 +2,12 @@
 nextflow.enable.dsl=2
 
 process concatenate {
-    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "concatenated.data/concatenated.zarr"
-    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "logs/concatenation.log"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "concatenated.data/concatenated.zarr"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/concatenation.log"
 
     /*container 'mari3ga/panpipes-preprocessing:latest'*/
     input:
         path samples
-        path outdir_path
 
     output:
         path "concatenated.data/concatenated.zarr"
