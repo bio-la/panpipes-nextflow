@@ -1,13 +1,11 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
-// filepath: nextflow/subworkflows/spatial_preprocessing.nf
+
 include { filter } from '../modules/spatial_preprocessing/filter.nf'
 include { plot } from '../modules/spatial_preprocessing/post_filter_plotting.nf'
 include { preprocess } from '../modules/spatial_preprocessing/preprocess.nf'
 include { concatenate } from '../modules/spatial_preprocessing/concatenate.nf'
-
-
 
 
 workflow spatial_preprocess {
