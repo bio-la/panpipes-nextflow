@@ -7,6 +7,7 @@ process preprocess {
     publishDir "$params.outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-preprocessing.log"
 
+    container 'mari3ga/panpipes-preprocessing:V3'
 
     input:
         tuple path(input_zarr), val(sample)

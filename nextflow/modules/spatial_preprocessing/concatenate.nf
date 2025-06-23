@@ -5,7 +5,8 @@ process concatenate {
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "concatenated.data/concatenated.zarr"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/concatenation.log"
 
-    /*container 'mari3ga/panpipes-preprocessing:latest'*/
+    container 'mari3ga/panpipes-preprocessing:V3'
+
     input:
         path samples
 
