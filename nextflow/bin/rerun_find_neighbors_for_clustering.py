@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import os
 import sys
@@ -5,9 +6,9 @@ import logging
 import scanpy as sc
 from muon import MuData, read
 
-from panpipes.funcs.scmethods import run_neighbors_method_choice
-from panpipes.funcs.io import read_yaml
-from panpipes.funcs.scmethods import lsi
+from funcs.scmethods import run_neighbors_method_choice
+from funcs.io import read_yaml
+from funcs.scmethods import lsi
 
 L = logging.getLogger()
 L.setLevel(logging.INFO)
