@@ -12,7 +12,7 @@ process umap {
         val neighbors_key
 
     output:
-        tuple path("umap_coords/$sample-$min_dist-umap.txt.gz"), val(sample), emit: umap_txt_ch
+        path("umap_coords/$sample-$min_dist-umap.txt.gz"), emit: umap_txt_ch
         path "logs/2-$sample-$min_dist-run_umap.log"
 
 
