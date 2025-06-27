@@ -14,7 +14,7 @@ process clustering {
         val neighbors_key
 
     output:
-        tuple path("clusters/$sample-$algorithm-$resolution-clusters.txt.gz"), val(sample), emit: clustering_txt_ch
+        path("clusters/$sample-$algorithm-$resolution-clusters.txt.gz"), emit: clustering_txt_ch
         path "clusters/cellnum_per_cluster.csv"
         path "logs/3-$sample-$algorithm-$resolution-run_clustering.log"
 

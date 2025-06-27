@@ -5,6 +5,7 @@ nextflow.enable.dsl=2
 include { run_neighbors } from '../modules/spatial_clustering/rerun_neighbors.nf'
 include { umap } from '../modules/spatial_clustering/run_umap.nf'
 include { clustering } from '../modules/spatial_clustering/run_clustering.nf'
+include { aggregate } from '../modules/spatial_clustering/aggregate_csv.nf'
 
 
 workflow spatial_clustering {
@@ -25,6 +26,11 @@ workflow spatial_clustering {
     /*Run Clustering*/
     resolution_ch= Channel.from(params.resolution)
     sample_res_ch = neighbor_zarr_ch.combine(resolution_ch)
-    clustering(sample_res_ch, params.algorithm, params.neighbors_key)
+    clustering_txt_ch = clustering(sample_res_ch, params.algorithm, params.neighbors_key)
+   
+    /*Aggregrate Clusters csv*/
+    csv_ch = clustering_txt_ch[0].collect()
+    aggregate(csv_ch)
+
     
 }
