@@ -4,6 +4,7 @@ nextflow.enable.dsl=2
 
 include { run_neighbors } from '../modules/spatial_clustering/rerun_neighbors.nf'
 include { umap } from '../modules/spatial_clustering/run_umap.nf'
+include { clustering } from '../modules/spatial_clustering/run_clustering.nf'
 
 
 workflow spatial_clustering {
@@ -17,8 +18,13 @@ workflow spatial_clustering {
     neighbor_zarr_ch = run_neighbors(inputs,params.neighbor_dict, params.n_threads).neighbor_zarr_ch
     
     /*Run UMAP*/
+    min_dist_ch= Channel.from(params.min_dist)
+    sample_min_dist_ch = neighbor_zarr_ch.combine(min_dist_ch)
+    umap_txt_ch = umap(sample_min_dist_ch, params.neighbors_key)
 
-    // change min_dist to be a list & run for each min_dist 
-    umap_txt_ch = umap(neighbor_zarr_ch, params.min_dist, params.neighbors_key)
+    /*Run Clustering*/
+    resolution_ch= Channel.from(params.resolution)
+    sample_res_ch = neighbor_zarr_ch.combine(resolution_ch)
+    clustering(sample_res_ch, params.algorithm, params.neighbors_key)
     
 }
