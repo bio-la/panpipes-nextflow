@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import muon as mu
 import scanpy as sc
 import argparse
@@ -78,12 +79,12 @@ clusters.to_csv(args.outfile, sep='\t')
 L.info("Saving cell numbers per cluster to csv file")
 
 tmp = clusters['clusters'].value_counts().to_frame("cell_num").reset_index().rename(columns={"index":"cluster"})
-tmp.to_csv(os.path.dirname(args.outfile) + "/cellnum_per_cluster.csv")
+tmp.to_csv("clusters/cellnum_per_cluster.csv")
 
 if "sample_id" in adata.obs.columns:
     ccounts = pd.DataFrame(adata.obs[['sample_id', 'clusters']])
     tmp = ccounts.value_counts().to_frame("cell_num").reset_index()
-    tmp.to_csv(os.path.dirname(args.outfile) + "/cellnum_per_sample_id_per_cluster.csv")
+    tmp.to_csv("clusters/cellnum_per_sample_id_per_cluster.csv")
 
 L.info("Done")
 
