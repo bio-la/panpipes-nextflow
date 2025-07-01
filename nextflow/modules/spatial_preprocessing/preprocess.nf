@@ -3,10 +3,11 @@ nextflow.enable.dsl=2
 
 process preprocess {
     tag "$sample"
-    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "preprocessed.data/$sample-preprocessed.zarr"
-    publishDir "$outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
-    publishDir "$outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-preprocessing.log"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "preprocessed.data/$sample-preprocessed.zarr"
+    publishDir "$params.outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-preprocessing.log"
 
+    container 'mari3ga/panpipes-preprocessing:V3'
 
     input:
         tuple path(input_zarr), val(sample)
@@ -21,7 +22,6 @@ process preprocess {
         val theta
         val clip 
         val n_pcs
-        path outdir_path
 
     output:
         path "preprocessed.data/$sample-preprocessed.zarr", emit: preprocessed_ch
