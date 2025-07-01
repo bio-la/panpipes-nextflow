@@ -1,12 +1,14 @@
+#!/usr/bin/env python
 import scanpy as sc
 from muon import read, MuData
 from anndata import AnnData
 import argparse
 import pandas as pd
 import numpy as np
+import os
 from scipy.sparse import issparse
-from panpipes.funcs.processing import check_for_bool
-from panpipes.funcs.scmethods import find_all_markers_pseudo_seurat
+from funcs.processing import check_for_bool
+from funcs.scmethods import find_all_markers_pseudo_seurat
 
 
 import sys
@@ -216,6 +218,7 @@ else:
     import spatialdata as sd
     L.info("Reading in SpatialData from '%s'" % args.infile)
     adata = sd.read_zarr(args.infile)["table"]
+    os.makedirs("markers", exist_ok=True)
         
 
 main(adata, 
