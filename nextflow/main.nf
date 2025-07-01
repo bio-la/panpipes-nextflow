@@ -8,13 +8,8 @@ include {spatial_clustering} from './subworkflows/spatial_clustering.nf'
 //include {preprocessing} from './subworkflows/preprocessing.nf'
 
 workflow preprocess_spatial{
-    //Channel.fromPath(params.submission_file).set { submission_file_ch }
-    //Channel.fromPath(params.resources).set { resources_dir_ch }
-
 
     spatial_preprocess()
-    //ingest(submission_file_ch, resources_dir_ch)
-    //preprocessing(ingest.out.tenx_metrics)
     
 }
 

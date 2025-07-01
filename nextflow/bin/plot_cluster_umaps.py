@@ -6,9 +6,7 @@ CRG 2020-06-19
 import scanpy as sc
 from muon import read, MuData
 sc.settings.autoshow = False
-import pandas as pd
 import argparse
-from anndata import AnnData
 import matplotlib
 matplotlib.use('agg')
 import os 
@@ -31,12 +29,14 @@ parser.add_argument("--infile",
 parser.add_argument("--modalities",
                     default="rna",
                     help="list of modalities to search for UMAPs in")
+parser.add_argument("--sample_id",
+                    default="sample1",
+                    help="sample ID")
 args, opt = parser.parse_known_args()
 
 L.info("Running with params: %s", args)
-# args = argparse.Namespace(infile='mdata_clustered.h5mu', figdir=None)
-# ---------
 
+'''
 def main(adata,figdir):
     # get all possible umap coords
     pattern="X_umap(.*)"
@@ -62,10 +62,10 @@ def main(adata,figdir):
         fig.suptitle(ok, y=1.0)
         L.info("Saving figure to '%s'" % os.path.join(figdir, ok +  "_clusters.png"))
         fig.savefig(os.path.join(figdir, ok +  "_clusters.png"))
-
-def plot_spatial(adata,figdir):
+'''
+def plot_umap(adata,figdir):
     # get all possible umap coords
-    pattern="spatial(.*)"
+    pattern="X_umap(.*)"
     obsm_keys = [x for x in adata.obsm.keys() if re.search(pattern, x)]
     L.info("UMAP keys found: %s" % obsm_keys)
     # get all possible clustersclusters
@@ -84,10 +84,10 @@ def plot_spatial(adata,figdir):
         fig = sc.pl.embedding(adata, basis = ok,color=cluster_keys,
          show=False, return_fig=True, legend_loc='on data')
         for ax in fig.axes:
-            ax.set(xlabel="spatial1", ylabel="spatial2")
+            ax.set(xlabel="UMAP_1", ylabel="UMAP_2")
         fig.suptitle(ok, y=1.0)
-        L.info("Saving figure to '%s'" % os.path.join(figdir, ok +  "_clusters.png"))
-        fig.savefig(os.path.join(figdir, ok +  "_clusters.png"))
+        L.info("Saving figure to '%s'" % os.path.join(figdir, args.sample_id + "_" +ok +  "_clusters.png"))
+        fig.savefig(os.path.join(figdir, args.sample_id  + "_" + ok +  "_clusters.png"))
 
 
 if ".zarr" in args.infile:
@@ -106,7 +106,7 @@ if 'multimodal' in mods:
     if os.path.exists("multimodal/figures") is False:
         os.makedirs("multimodal/figures")
     L.info("Plotting multimodal figures")
-    main(data, figdir="multimodal/figures")
+    plot_umap(data, figdir="multimodal/figures")
 
 
 # we also need to plot per modality
@@ -117,16 +117,15 @@ if type(data) is MuData:
             figdir  = os.path.join(mod, "figures")
             if os.path.exists(figdir) is False:
                 os.makedirs(figdir)
-            if mod == "spatial": # added separate function for spatial
-                plot_spatial(data[mod], figdir)
-            else:
-                main(data[mod], figdir)
+            #if mod == "spatial": # added separate function for spatial
+            #    plot_umap(data[mod], figdir)
+            #else:
+            plot_umap(data[mod], figdir)
 elif isinstance(data, sd.SpatialData):
     L.info("Plotting for modality: spatial")
-    figdir  = os.path.join("spatial", "figures")
-    if os.path.exists(figdir) is False:
-        os.makedirs(figdir)
-    plot_spatial(data["table"], figdir)
+    figdir  = "figures/spatial"
+    os.makedirs(figdir, exist_ok=True)
+    plot_umap(data["table"], figdir)
 
 
 

@@ -7,6 +7,7 @@ include { umap } from '../modules/spatial_clustering/run_umap.nf'
 include { clustering } from '../modules/spatial_clustering/run_clustering.nf'
 include { aggregate } from '../modules/spatial_clustering/aggregate_csv.nf'
 include { collate_spatialdata } from '../modules/spatial_clustering/collate_sdata.nf'
+include { plot_umap } from '../modules/spatial_clustering/plot_clusters_umap.nf'
 
 
 workflow spatial_clustering {
@@ -36,7 +37,18 @@ workflow spatial_clustering {
     /*Collate SpatialData*/
     all_neighbor_zarr_ch = neighbor_zarr_ch.map { tuple -> tuple[0] }.collect()
     umap_ch = umap_txt_ch[0].collect()
-    collate_spatialdata(all_neighbor_zarr_ch, aggregate_csv_ch[0], umap_ch)
+    collated_sdata_ch = collate_spatialdata(all_neighbor_zarr_ch, aggregate_csv_ch[0], umap_ch).collated_sdata_ch
+
+    /*Plot UMAP*/ 
+    collated_flatten_ch = collated_sdata_ch.flatten()
+    collated_flatten_ch = collated_flatten_ch.map { file ->
+        def name = file.getBaseName()
+        return [file, name]
+    }
+    plot_umap(collated_flatten_ch)
+
+
+
 
     
 }
