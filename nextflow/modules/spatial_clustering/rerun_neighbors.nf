@@ -3,7 +3,6 @@ nextflow.enable.dsl=2
 
 process run_neighbors {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "clustered.data/$sample-neighbors.zarr" 
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/1-$sample-run_neighbors.log"
     
 

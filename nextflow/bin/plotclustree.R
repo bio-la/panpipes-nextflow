@@ -39,9 +39,10 @@ print("Running Clustree")
 gg <- clustree(m, prefix =col_prefix) + ggtitle(opt$plot_title)
 
 
-if (!(dir.exists(dirname(opt$outfile)))){
-	dir.create(dirname(opt$outfile))
-}
+#dir.create(figdir, showWarnings = FALSE, recursive = TRUE)
+#if (!(dir.exists(dirname(opt$outfile)))){
+dir.create(dirname(opt$outfile), showWarnings = FALSE, recursive = TRUE)
+#}
 
 # save
 print("Saving Clustree")
