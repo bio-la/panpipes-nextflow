@@ -8,7 +8,6 @@ process plot_umap {
     
 
     input:
-        //path input_zarr
         tuple path(input_zarr), val(sample)
 
     output:
