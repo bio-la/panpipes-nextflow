@@ -8,6 +8,7 @@ include { clustering } from '../modules/spatial_clustering/run_clustering.nf'
 include { aggregate } from '../modules/spatial_clustering/aggregate_csv.nf'
 include { collate_spatialdata } from '../modules/spatial_clustering/collate_sdata.nf'
 include { plot_umap } from '../modules/spatial_clustering/plot_clusters_umap.nf'
+include { run_clustree } from '../modules/spatial_clustering/plot_clustree.nf'
 
 
 workflow spatial_clustering {
@@ -47,6 +48,13 @@ workflow spatial_clustering {
     }
     plot_umap(collated_flatten_ch)
 
+    /*Run Clustree*/
+    aggregate_flatten_ch = aggregate_csv_ch[0].flatten().map { filename ->
+        def base = filename instanceof Path ? filename.getName() : filename
+        def sample = base.replaceFirst(/-all_res_clusters_list\.txt\.gz$/, '')
+        return [filename, sample]
+    }
+    run_clustree(aggregate_flatten_ch)
 
 
 
