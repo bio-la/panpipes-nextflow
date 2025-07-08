@@ -10,7 +10,7 @@ include { collate_spatialdata } from '../modules/spatial_clustering/collate_sdat
 include { plot_umap } from '../modules/spatial_clustering/plot_clusters_umap.nf'
 include { run_clustree } from '../modules/spatial_clustering/plot_clustree.nf'
 include { find_marker } from '../modules/spatial_clustering/run_find_marker.nf'
-
+include { plot_markers} from '../modules/spatial_clustering/plot_marker_dotplot.nf'
 
 workflow spatial_clustering {
 
@@ -65,7 +65,10 @@ workflow spatial_clustering {
     return [f, sample, resolution]
     }
     cluster_sample_zarr_ch = cluster_sample_ch.combine(collated_flatten_ch, by: 1)
-    find_marker(cluster_sample_zarr_ch, params.layer,params.method,params.mincells,
+    marker_txt_ch = find_marker(cluster_sample_zarr_ch, params.layer,params.method,params.mincells,
                 params.pseudo_seurat,params.minpct,params.threshuse)
     
+    /*Plot Dotplot*/
+    plot_markers(marker_txt_ch[0], params.layer_dotplot, params.top_n_markers)
+
 }
