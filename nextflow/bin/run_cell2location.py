@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Run Cell2Location
 '''
@@ -15,10 +16,10 @@ import argparse
 import sys
 import logging
 
-from panpipes.funcs.plotting import cell2loc_plot_QC_reference
-from panpipes.funcs.plotting import cell2loc_plot_QC_reconstr
-from panpipes.funcs.plotting import cell2loc_plot_history
-from panpipes.funcs.scmethods import cell2loc_filter_genes
+from funcs.plotting import cell2loc_plot_QC_reference
+from funcs.plotting import cell2loc_plot_QC_reconstr
+from funcs.plotting import cell2loc_plot_history
+from funcs.scmethods import cell2loc_filter_genes
 
 
 
@@ -135,14 +136,14 @@ args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
 figdir = args.figdir
-if not os.path.exists(figdir):
-    os.mkdir(figdir)
+os.makedirs(figdir, exist_ok=True)
 sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
 
+
+
 output_dir = args.output_dir
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
+os.makedirs(output_dir, exist_ok=True)
 
 
 if args.N_cells_per_location is None: 
