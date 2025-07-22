@@ -3,12 +3,12 @@ nextflow.enable.dsl=2
 
 process spatial_qc {
 
-    tag "$input_zarr.baseName"
+    tag "$input_h5.baseName"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
     publishDir "${params.outdir}/${params.mode}", mode: 'copy', pattern: "*_unfilt.zarr"
 
     input:
-    path input_zarr
+    path input_h5
     path ccgenes_file
     path customgenes_file
     val spatial_filetype
@@ -29,7 +29,7 @@ process spatial_qc {
 
     """
     python run_scanpyQC_spatial.py \\
-        --input_anndata ${input_zarr} \\
+        --input_anndata ${input_h5} \\
         --spatial_filetype ${spatial_filetype} \\
         --outfile ${output_name} \\
         --figdir ${figdir} \\
@@ -37,6 +37,6 @@ process spatial_qc {
         ${cg_arg} \\
         ${cp_arg} \\
         ${sg_arg} \\
-        > logs/spatial_qc_${input_zarr.simpleName}.log 2>&1
+        > logs/spatial_qc_${input_h5.simpleName}.log 2>&1
     """
 }

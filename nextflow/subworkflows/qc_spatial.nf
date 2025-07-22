@@ -6,9 +6,9 @@ include { spatial_qc } from '../modules/qc_spatial/spatial_qc.nf'
 include { plot_spatial_qc } from '../modules/qc_spatial/plot_spatial_qc.nf'
 
 workflow qc_spatial {
+    
 
     main:
-    // Load the CSV into structured tuples
     input_data_ch = Channel
         .fromPath(params.input_csv)
         .splitCsv(header: true)
@@ -17,48 +17,63 @@ workflow qc_spatial {
                 row.sample_id,
                 file(row.spatial_path),
                 row.spatial_filetype ?: params.spatial_filetype,
-                file(row.visium_feature_bc_matrix),
-                file(row.visium_fullres_image_file),
-                file(row.visium_tissue_positions_file),
-                file(row.visium_scalefactors_file),
-                file(row.vpt_cell_by_gene),
-                file(row.vpt_cell_metadata),
-                file(row.vpt_cell_boundaries)
+                row.visium_feature_bc_matrix     ? file(row.visium_feature_bc_matrix)   : "None",
+                row.visium_fullres_image_file    ? file(row.visium_fullres_image_file)    : "None",
+                row.visium_tissue_positions_file ? file(row.visium_tissue_positions_file) : "None",
+                row.visium_scalefactors_file     ? file(row.visium_scalefactors_file)     : "None",
+                row.vpt_cell_by_gene             ? file(row.vpt_cell_by_gene)         : "None",
+                row.vpt_cell_metadata            ? file(row.vpt_cell_metadata)      : "None",
+                row.vpt_cell_boundaries          ? file(row.vpt_cell_boundaries)      : "None"
             )
-        }
+        }.view()
 
-    // First step: make .h5mu spatial object
     spatial_objects = load_spatial_data(input_data_ch)
 
-    // Second step: QC on that object
-    qc_input = spatial_objects.out.spatial_data_object.map { f ->
-        def sample_id = f.getBaseName().replaceAll(/_raw.*/, '')
-        def outfile   = "qc.data/${sample_id}_unfilt.h5ad"
-        tuple(
-            f,
-            file(params.ccgenes),
-            file(params.custom_genes_file),
-            params.spatial_filetype,
-            params.calc_proportions,
-            params.score_genes,
-            "./figures",
-            outfile
-        )
-    }
+    //qc_input = spatial_objects.map { f ->
+    //    def sample_id = f.getBaseName().replaceAll(/_raw.*/, '')
+    //    def outfile   = "qc.data/${sample_id}_unfilt.h5ad"
+        // output .zarr check
+    //    tuple(
+    //        f,
+    //        params.ccgenes ? file(params.ccgenes) : null,
+    //        params.custom_genes_file ? file(params.custom_genes_file) : null,
+    //        params.spatial_filetype,
+    //        params.calc_proportions,
+    //        params.score_genes,
+    //        "./figures",
+    //       outfile
+    //    )
+    //}
+    //spatial_qc(
+    //     qc_input.map { it -> it[0] },
+    //     qc_input.map { it -> it[1] },
+    //     qc_input.map { it -> it[2] },
+    //     qc_input.map { it -> it[3] },
+    //     qc_input.map { it -> it[4] },
+    //     qc_input.map { it -> it[5] },
+    //     qc_input.map { it -> it[6] },
+    //     qc_input.map { it -> it[7] }
+    // )
 
-    qc_results = spatial_qc(qc_input)
+    // if (params.plotqc.enabled) {
 
-    // Optional third step: plot QC
-    plot_input = qc_results.out.qc_h5ad.filter { _ -> params.plotqc.enabled }
-        .map { f ->
-            tuple(
-                f,
-                params.spatial_filetype,
-                params.plotqc.grouping_var,
-                params.plotqc.spatial_metrics,
-                "./figures"
-            )
-        }
+    //     plot_input = qc_input.map { tup ->
+    //         def output_file = tup[7]
+    //         tuple(
+    //             output_file,
+    //             params.spatial_filetype,
+    //             params.plotqc.grouping_var,
+    //             params.plotqc.spatial_metrics,
+    //             "./figures"
+    //         )
+    //     }
 
-    plot_spatial_qc(plot_input)
+    //     plot_spatial_qc(
+    //         plot_input.map { it -> it[0] },
+    //         plot_input.map { it -> it[1] },
+    //         plot_input.map { it -> it[2] },
+    //         plot_input.map { it -> it[3] },
+    //         plot_input.map { it -> it[4] }
+    //     )
+    // }
 }

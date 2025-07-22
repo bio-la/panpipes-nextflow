@@ -4,7 +4,8 @@ nextflow.enable.dsl=2
 process plot_spatial_qc {
 
     tag "$input_zarr.baseName"
-    conda '/path/to/spatial-transcriptomics'
+    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
+
     publishDir "${params.outdir}/${params.mode}/figures/spatial", mode: 'copy'
 
     input:
@@ -23,12 +24,12 @@ process plot_spatial_qc {
     def sm = spatial_metrics ? "--spatial_qc_metrics ${spatial_metrics}" : ""
 
     """
-    python plot_qc_spatial.py \\
-        --input_spatialdata ${input_zarr} \\
-        --spatial_filetype ${spatial_filetype} \\
-        --figdir ${figdir} \\
-        ${gv} \\
-        ${sm} \\
+    python plot_qc_spatial.py \
+        --input_spatialdata ${input_zarr} \
+        --spatial_filetype ${spatial_filetype} \
+        --figdir ${figdir} \
+        ${gv} \
+        ${sm} \
         > logs/plot_spatial_qc_${input_zarr.simpleName}.log 2>&1
     """
 }

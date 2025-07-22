@@ -9,6 +9,8 @@ import yaml
 #from muon._atac.tools import add_peak_annotation, locate_fragments
 #import squidpy as sq
 import spatialdata_io as sd_io
+#import scanpy as sc
+#from spatialdata import SpatialData
 #from mudata import MuData
 import os
 from pathlib import Path
@@ -44,7 +46,7 @@ parser.add_argument('--output_file',
 # start of spatial args
 parser.add_argument('--spatial_infile', 
                     default=None,
-                    help='')
+                    help='Path to directory with spatial data, e.g. Visium or Xenium')
 parser.add_argument('--spatial_filetype', 
                     default=None,
                     help='')
