@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Run Tangram
 '''
@@ -16,7 +17,6 @@ import argparse
 import sys
 import logging
 import json
-
 
 L = logging.getLogger()
 L.setLevel(logging.INFO)
@@ -87,15 +87,14 @@ L.info("Running with params: %s", args)
 if isinstance(args.kwargs, str): 
 	args.kwargs = json.loads(args.kwargs)
 
+
 figdir = args.figdir
-if not os.path.exists(figdir):
-    os.mkdir(figdir)
+os.makedirs(figdir, exist_ok=True)
 sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
 
 output_dir = args.output_dir
-if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
+os.makedirs(output_dir, exist_ok=True)
 
 
 
@@ -103,8 +102,6 @@ if not os.path.exists(output_dir):
 #spatial: 
 L.info("Reading in SpatialData from '%s'" % args.input_spatial)
 sdata_st = sd.read_zarr(args.input_spatial)
-#mdata_spatial = mu.read(args.input_spatial)
-#adata_st = mdata_spatial.mod['spatial']
 #single-cell: 
 L.info("Reading in reference SpatialData from '%s'" % args.input_singlecell)
 mdata_singlecell = mu.read(args.input_singlecell)
@@ -123,7 +120,7 @@ if args.gene_list is not None: # read in csv and create list
 
 else: # perform feature selection using sc.tl.rank_genes_groups()
     L.info("Running 'scanpy.tl.rank_genes_groups()'")
-    sc.tl.rank_genes_groups(adata_sc, groupby=args.labels_key_rank_genes, layer=args.layer_rank_genes, method=args.method_rank_genes,corr_method = args.corr_method_rank_genes)
+    sc.tl.rank_genes_groups(adata_sc,use_raw=False, groupby=args.labels_key_rank_genes, layer=args.layer_rank_genes, method=args.method_rank_genes,corr_method = args.corr_method_rank_genes)
     L.info("Plotting rank genes group")
     sc.pl.rank_genes_groups(adata_sc, show = False, save = ".png")
     markers_df = pd.DataFrame(adata_sc.uns["rank_genes_groups"]["names"]).iloc[0:int(args.n_genes_rank), :]

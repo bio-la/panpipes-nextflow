@@ -8,6 +8,7 @@ from anndata import AnnData
 import muon as mu
 import pandas as pd
 import argparse
+import os
 
 sc.settings.autoshow = False
 
@@ -28,6 +29,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--infile",
                     default="mdata.h5mu, full object, not filtered by HVG",
                     help="file name, format: .h5mu")
+parser.add_argument("--sample_id",
+                    default="sample1",
+                    help="ID of the sample")
 parser.add_argument('--modality',
                     default=None,
                     help='')
@@ -51,6 +55,8 @@ args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
 sc.settings.figdir = args.figure_prefix
+
+os.makedirs(args.figure_prefix, exist_ok=True)
 
 # script
 
@@ -86,7 +92,7 @@ def do_plots(adata, mod, group_col, mf, n=10, layer=None):
                 marker_list,
                 groupby=group_col,
                 layer=layer,
-                save = '_top_markers'+ mod +'.png',
+                save = args.sample_id+ "_"+ group_col + '_top_markers_'+ mod +'.png',
                 dendrogram=incl_dendrogram,
                 # figsize=(24, 5)
                 )
@@ -94,21 +100,21 @@ def do_plots(adata, mod, group_col, mf, n=10, layer=None):
     sc.pl.matrixplot(adata,
                     marker_list,
                     groupby=group_col,
-                    save=  '_top_markers'+ mod +'.png',
+                    save=  args.sample_id+ "_"+ group_col + '_top_markers_'+ mod +'.png',
                     dendrogram=incl_dendrogram,
                     figsize=(24, 5))
     L.info("Plotting dotplot")
     sc.pl.dotplot(adata,
                 marker_list,
                 groupby=group_col,
-                save=  '_top_markers'+ mod +'.png',
+                save= args.sample_id+ "_"+ group_col + '_top_markers_'+ mod +'.png',
                 dendrogram=incl_dendrogram,
                 figsize=(24, 5))
     L.info("Plotting heatmap")
     sc.pl.heatmap(adata,
                 marker_list,
                 groupby=group_col,
-                save=  '_top_markers'+ mod +'.png',
+                save= args.sample_id+ "_"+ group_col + '_top_markers_'+ mod +'.png',
                 dendrogram=incl_dendrogram,
                 # figsize=(24, 5)
                 )
@@ -131,6 +137,8 @@ else:
     import spatialdata as sd
     L.info("Reading in SpatialData from '%s'" % args.infile)
     adata = sd.read_zarr(args.infile)["table"]
+    splitted_group_col = args.group_col.split("-")
+    args.group_col = splitted_group_col[0] + "_res_" + splitted_group_col[1]
  
 
 L.info("Loading marker information from '%s'" % args.marker_file)
@@ -150,13 +158,15 @@ L.info(f"Dimensions of the marker file are: {mf.shape[0]} rows and {mf.shape[1]}
 ch=mf[mf['avg_logFC'] > 0]
 if mf.shape[0]>=2:
     # get layer
-    adata.obs[args.group_col] = mdata.obs[args.group_col]
+    if args.modality != "spatial":
+        adata.obs[args.group_col] = mdata.obs[args.group_col]
     do_plots(adata,
-            mod=args.modality, 
-            group_col=args.group_col,
-            mf=mf,
-            layer=args.layer, 
-            n=int(args.n))
+                mod=args.modality, 
+                group_col=args.group_col,
+                mf=mf,
+                layer=args.layer, 
+                n=int(args.n))
+
 else:
     L.info("No markers were detected with positive LogFC, no plotting is done")
 

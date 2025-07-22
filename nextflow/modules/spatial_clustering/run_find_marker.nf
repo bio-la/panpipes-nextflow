@@ -3,7 +3,8 @@ nextflow.enable.dsl=2
 
 process find_marker {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*.txt"
+    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*markers.txt"
+    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*_signif.txt"
     publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*.xlsx"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/8-$sample-$cluster_res-find_markers.log"
     
@@ -18,7 +19,8 @@ process find_marker {
         val threshuse
 
     output:
-        path "markers/*.txt"
+        tuple path("markers/*markers.txt"), path(input_zarr), val(cluster_res) , val(sample), emit: marker_txt_ch
+        path "markers/*_signif.txt"
         path "markers/*.xlsx"
         path "logs/8-$sample-$cluster_res-find_markers.log"
 
