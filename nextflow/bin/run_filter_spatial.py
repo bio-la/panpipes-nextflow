@@ -50,9 +50,9 @@ parser.add_argument('--output_spatialdata',
                     help='')
 parser.add_argument('--filter_dict',
                     default='',
-                    help='this is pull')
+                    help='')
 # cross modalities args
-parser.add_argument('--keep_barcodes', default=None,
+parser.add_argument('--keep_barcodes', default="None",
                     help='1 column list of barcodes to keep, note that they should match the spatialdata input, this filtering happens first')
 
 
