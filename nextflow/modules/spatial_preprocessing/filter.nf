@@ -6,7 +6,7 @@ process filter {
     if (params.save_filtered){
         publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "filtered.data/*-filtered.zarr"
     }
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-filtering.log"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/1-$sample-filtering.log"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "tables/$sample-filtered_cell_counts.csv"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "tables/$sample-filtered_cell_metadata.tsv"
    
@@ -19,7 +19,7 @@ process filter {
 
     output:
         tuple path("filtered.data/$sample-filtered.zarr"), val(sample), emit: filtered_zarr_ch
-        path "logs/$sample-filtering.log"
+        path "logs/1-$sample-filtering.log"
         path "tables/$sample-filtered_cell_counts.csv"
         path "tables/$sample-filtered_cell_metadata.tsv"
 
@@ -32,6 +32,6 @@ process filter {
         --output_spatialdata filtered.data/$sample-filtered.zarr \
         --filter_dict '${filter_dict}' \
         --keep_barcodes $keep_barcodes \
-        > logs/$sample-filtering.log
+        > logs/1-$sample-filtering.log
     """
 }
