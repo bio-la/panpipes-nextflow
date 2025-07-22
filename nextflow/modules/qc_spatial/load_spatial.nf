@@ -1,6 +1,7 @@
 process load_spatial_data {
     tag "$sample_id"
-    publishDir "${params.outdir}/${params.mode}", mode: 'copy', pattern: "*_raw.zarr"
+    publishDir "${params.outdir}/${params.mode}/tmp", mode: 'copy', pattern: "*_raw.zarr"
+    publishDir "${params.outdir}/${params.mode}/logs", mode: 'copy', pattern: "load_spatialdata_*.log"
 
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
@@ -11,7 +12,8 @@ process load_spatial_data {
     val(vpt_cell_by_gene), val(vpt_cell_metadata), val(vpt_cell_boundaries)
 
     output:
-    path "${sample_id}_raw.zarr", emit: spatial_data_object 
+    path "${sample_id}_raw.zarr", emit: spatial_data_object
+    path "load_spatialdata_${sample_id}.log", emit: log_file
 
     script:
     def modality_dict = "--mode_dictionary \"{'spatial': true}\""
@@ -34,8 +36,11 @@ process load_spatial_data {
         flag('vpt_cell_boundaries', vpt_cell_boundaries)
     ].join(' ') : ''
 
+    def log_file = "load_spatialdata_${sample_id}.log"
+
     """
     mkdir -p ${params.outdir}/${params.mode}/logs
+
     python ${workflow.projectDir}/bin/make_spatialData_from_csv.py \
       ${modality_dict} \
       --sample_id ${sample_id} \
@@ -44,6 +49,6 @@ process load_spatial_data {
       --spatial_infile ${spatial_infile} \
       ${visium_args} \
       ${vizgen_args} \
-      > ${params.outdir}/${params.mode}/logs/load_spatialdata_${sample_id}.log 2>&1
+      > ${log_file} 2>&1
     """
 }
