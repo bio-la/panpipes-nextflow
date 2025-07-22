@@ -5,7 +5,7 @@ process preprocess {
     tag "$sample"
     publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "preprocessed.data/$sample-preprocessed.zarr"
     publishDir "$params.outdir_path", mode: 'copy', pattern:"figures/spatial/*.png"
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/$sample-preprocessing.log"
+    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/3-$sample-preprocessing.log"
 
     container 'mari3ga/panpipes-preprocessing:V3'
 
@@ -26,7 +26,7 @@ process preprocess {
     output:
         path "preprocessed.data/$sample-preprocessed.zarr", emit: preprocessed_ch
         path "figures/spatial/*.png"
-        path "logs/$sample-preprocessing.log"
+        path "logs/3-$sample-preprocessing.log"
 
     script: 
     """
@@ -39,7 +39,7 @@ process preprocess {
             --squidpy_hvg_flavour $squidpy_hvg_flavour \
             --min_mean $min_mean --max_mean $max_mean --min_disp $min_disp --theta $theta \
             --clip $clip --n_pcs $n_pcs \
-            > logs/$sample-preprocessing.log
+            > logs/3-$sample-preprocessing.log
 
     """
 }
