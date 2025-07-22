@@ -3,40 +3,43 @@ nextflow.enable.dsl=2
 
 process spatial_qc {
 
-    tag "$input_h5.baseName"
+    tag "$sample_id"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
-    publishDir "${params.outdir}/${params.mode}", mode: 'copy', pattern: "*_unfilt.zarr"
+    publishDir "${params.outdir}/${params.mode}",mode:    'copy', pattern: "*_raw_unfilt.h5ad"
+    publishDir "${params.outdir}/${params.mode}",mode:    'copy', pattern: "*_cell_metadata.tsv"
+    publishDir "${params.outdir}/${params.mode}/figures", mode: 'copy', pattern: "figures/*"
+    publishDir "${params.outdir}/${params.mode}/logs", mode: 'copy', pattern: "spatial_qc_*.log"
 
     input:
-    path input_h5
-    path ccgenes_file
-    path customgenes_file
-    val spatial_filetype
-    val calc_proportions
-    val score_genes
-    val figdir
-    val output_name
+    tuple val(sample_id), path(input_zarr), val(spatial_filetype),
+        val(ccgenes_file), val(customgenes_file),
+        val(calc_proportions), val(score_genes),
+        val(figdir), val(output_name)
+
 
     output:
-    path "${output_name}", emit: qc_h5ad
-    path "*_cell_metadata.tsv", emit: metadata
+    path "*_unfilt.h5ad", emit: qc_h5ad
+    path "*cell_metadata.tsv", emit: metadata
+    path "spatial_qc_${sample_id}.log", emit: log_file
+
 
     script:
-    def cc_arg = ccgenes_file ? "--ccgenes ${ccgenes_file}" : ""
-    def cg_arg = customgenes_file ? "--customgenesfile ${customgenes_file}" : ""
-    def cp_arg = calc_proportions ? "--calc_proportions ${calc_proportions}" : ""
-    def sg_arg = score_genes ? "--score_genes ${score_genes}" : ""
+    def flag = { name, value -> value ? "--${name} ${value}" : '' }
+
+    def outfile = "${sample_id}_unfilt.h5ad"
+    def figdir  = "${workDir}/figures"              // figures stay in work; they’re copied via publishDir above
+    def log_file = "spatial_qc_${sample_id}.log"
 
     """
-    python run_scanpyQC_spatial.py \\
-        --input_anndata ${input_h5} \\
-        --spatial_filetype ${spatial_filetype} \\
-        --outfile ${output_name} \\
-        --figdir ${figdir} \\
-        ${cc_arg} \\
-        ${cg_arg} \\
-        ${cp_arg} \\
-        ${sg_arg} \\
-        > logs/spatial_qc_${input_h5.simpleName}.log 2>&1
+    python ${workflow.projectDir}/bin/run_scanpyQC_spatial.py \
+        --input_anndata   ${input_zarr} \
+        --spatial_filetype ${spatial_filetype} \
+        --outfile          ${outfile} \
+        --figdir           ${figdir} \
+        ${ flag('ccgenes',           ccgenes_file) } \
+        ${ flag('customgenesfile',   customgenes_file) } \
+        ${ flag('calc_proportions',  calc_proportions) } \
+        ${ flag('score_genes',       score_genes) } \
+        >  ${log_file} 2>&1
     """
 }

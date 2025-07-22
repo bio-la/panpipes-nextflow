@@ -25,35 +25,28 @@ workflow qc_spatial {
                 row.vpt_cell_metadata            ? file(row.vpt_cell_metadata)      : "None",
                 row.vpt_cell_boundaries          ? file(row.vpt_cell_boundaries)      : "None"
             )
-        }.view()
+        }
 
     spatial_objects = load_spatial_data(input_data_ch)
 
-    //qc_input = spatial_objects.map { f ->
-    //    def sample_id = f.getBaseName().replaceAll(/_raw.*/, '')
-    //    def outfile   = "qc.data/${sample_id}_unfilt.h5ad"
-        // output .zarr check
-    //    tuple(
-    //        f,
-    //        params.ccgenes ? file(params.ccgenes) : null,
-    //        params.custom_genes_file ? file(params.custom_genes_file) : null,
-    //        params.spatial_filetype,
-    //        params.calc_proportions,
-    //        params.score_genes,
-    //        "./figures",
-    //       outfile
-    //    )
-    //}
-    //spatial_qc(
-    //     qc_input.map { it -> it[0] },
-    //     qc_input.map { it -> it[1] },
-    //     qc_input.map { it -> it[2] },
-    //     qc_input.map { it -> it[3] },
-    //     qc_input.map { it -> it[4] },
-    //     qc_input.map { it -> it[5] },
-    //     qc_input.map { it -> it[6] },
-    //     qc_input.map { it -> it[7] }
-    // )
+
+    qc_input_ch = spatial_objects.spatial_data_object.map { zarr_file ->
+    def sample_id = zarr_file.getBaseName().replaceAll(/_raw\.zarr$/, '')
+    tuple(
+        sample_id,
+        zarr_file,
+        params.spatial_filetype,
+        params.ccgenes != "None" ? file(params.ccgenes) : null,
+        params.custom_genes_file != "None" ? file(params.custom_genes_file) : null,
+        params.calc_proportions != "None" ? params.calc_proportions : null,
+        params.score_genes != "None" ? params.score_genes : null,
+        "${params.outdir}/${params.mode}/figures",
+        "${sample_id}_adata_unfilt.h5ad"
+        )
+    }
+
+
+    spatial_qc(qc_input_ch)
 
     // if (params.plotqc.enabled) {
 
