@@ -6,32 +6,37 @@ process load_spatial_data {
 
     input:
     tuple val(sample_id), path(spatial_infile), val(spatial_filetype),
-          path(visium_feature_bc_matrix), path(visium_fullres_image_file),
-          path(visium_tissue_positions_file), path(visium_scalefactors_file),
-          path(vpt_cell_by_gene), path(vpt_cell_metadata), path(vpt_cell_boundaries)
+    path(visium_feature_bc_matrix), val(visium_fullres_image_file),
+    val(visium_tissue_positions_file), val(visium_scalefactors_file),
+    val(vpt_cell_by_gene), val(vpt_cell_metadata), val(vpt_cell_boundaries)
 
     output:
-    path "${sample_id}_raw.zarr", emit: spatial_data_object
+    path "${sample_id}_raw.zarr", emit: spatial_data_object 
 
     script:
     def modality_dict = "--mode_dictionary \"{'spatial': true}\""
     def output_file = "${sample_id}_raw.zarr"
 
-    def visium_args = spatial_filetype == 'visium' ? """
-        --visium_feature_bc_matrix ${visium_feature_bc_matrix}
-        --scalefactors_file ${visium_scalefactors_file}
-        --fullres_image_file ${visium_fullres_image_file}
-        --tissue_positions_file ${visium_tissue_positions_file}
-    """ : ''
+    def flag = { name, value ->
+        return (value && value != 'None' && value != 'null') ? "--${name} ${value}" : ''
+    }
 
-    def vizgen_args = spatial_filetype == 'vizgen' ? """
-        --vpt_cell_by_gene ${vpt_cell_by_gene}
-        --vpt_cell_metadata ${vpt_cell_metadata}
-        --vpt_cell_boundaries ${vpt_cell_boundaries}
-    """ : ''
+    def visium_args = spatial_filetype == 'visium' ? [
+        "--visium_feature_bc_matrix ${visium_feature_bc_matrix}",   // mandatory
+        flag('scalefactors_file',      visium_scalefactors_file),
+        flag('fullres_image_file',     visium_fullres_image_file),
+        flag('tissue_positions_file',  visium_tissue_positions_file)
+    ].join(' ') : ''
+
+    def vizgen_args = spatial_filetype == 'vizgen' ? [
+        flag('vpt_cell_by_gene',    vpt_cell_by_gene),
+        flag('vpt_cell_metadata',   vpt_cell_metadata),
+        flag('vpt_cell_boundaries', vpt_cell_boundaries)
+    ].join(' ') : ''
 
     """
-    python make_spatialData_from_csv.py \
+    mkdir -p ${params.outdir}/${params.mode}/logs
+    python ${workflow.projectDir}/bin/make_spatialData_from_csv.py \
       ${modality_dict} \
       --sample_id ${sample_id} \
       --output_file ${output_file} \
@@ -39,6 +44,6 @@ process load_spatial_data {
       --spatial_infile ${spatial_infile} \
       ${visium_args} \
       ${vizgen_args} \
-      > logs/load_spatialdata_${sample_id}.log 2>&1
+      > ${params.outdir}/${params.mode}/logs/load_spatialdata_${sample_id}.log 2>&1
     """
 }
