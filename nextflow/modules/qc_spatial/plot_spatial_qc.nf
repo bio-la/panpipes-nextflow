@@ -3,33 +3,40 @@ nextflow.enable.dsl=2
 
 process plot_spatial_qc {
 
-    tag "$input_zarr.baseName"
+    tag "$sample_id"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
-    publishDir "${params.outdir}/${params.mode}/figures/spatial", mode: 'copy'
+    publishDir "${params.outdir}/figures", mode: 'copy', pattern: "figures/*.png"
+
+    publishDir "${params.outdir}/${params.mode}/logs", mode: 'copy', pattern: "plot_spatial_qc_*.log"
 
     input:
-    path input_zarr
-    val spatial_filetype
-    val grouping_var
-    val spatial_metrics
-    val figdir
+    tuple val(sample_id), path(input_zarr), val(spatial_filetype),
+        val(grouping_var), val(spatial_metrics)
+        //val(figdir)
+
 
     output:
-    path "figures/spatial/*.png", emit: plots
-    path "figures/spatial/*.pdf", optional: true, emit: plots_pdf
+    path "figures/*.png", emit: plots
+    path "plot_spatial_qc_${sample_id}.log", emit: log_file
+    
 
     script:
-    def gv = grouping_var ? "--grouping_var ${grouping_var}" : ""
-    def sm = spatial_metrics ? "--spatial_qc_metrics ${spatial_metrics}" : ""
+    def gv = grouping_var ? "--grouping_var ${grouping_var.join(' ')}" : ""
+    def sm = spatial_metrics ? "--spatial_qc_metrics ${spatial_metrics.join(' ')}" : ""
+
+
+    def log_file = "plot_spatial_qc_${sample_id}.log"
+    def figdir  = "${workDir}/figures"
 
     """
-    python plot_qc_spatial.py \
+    mkdir -p figures
+    python ${workflow.projectDir}/bin/plot_qc_spatial.py \
         --input_spatialdata ${input_zarr} \
         --spatial_filetype ${spatial_filetype} \
         --figdir ${figdir} \
         ${gv} \
         ${sm} \
-        > logs/plot_spatial_qc_${input_zarr.simpleName}.log 2>&1
+        > ${log_file} 2>&1
     """
 }

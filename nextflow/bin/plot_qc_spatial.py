@@ -44,9 +44,11 @@ parser.add_argument("--spatial_filetype",
                     help="")
 parser.add_argument("--spatial_qc_metrics",
                     default="None",
+                    nargs='+',
                     help="metrics to plot")
 parser.add_argument("--grouping_var",
                     default="None",
+                    nargs='+',
                     help="variables to group the cells by")
 
 
@@ -56,7 +58,8 @@ args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
 
-figdir = args.figdir
+#figdir = args.figdir
+figdir = "figures"
 os.makedirs(figdir, exist_ok=True)
 
 sc.settings.figdir = figdir
@@ -70,8 +73,10 @@ sdata = sd.read_zarr(args.input_spatialdata)
 L.info(sdata["table"])
 
 # convert string to list of strings
-qc_metrics = ast.literal_eval(args.spatial_qc_metrics)
-group_var = ast.literal_eval(args.grouping_var)
+qc_metrics = [] if args.spatial_qc_metrics == ["None"] else args.spatial_qc_metrics
+
+group_var = [] if args.grouping_var == ["None"] else args.grouping_var
+
 
 # check if metrics in adata.obs or adata.var
 qc_metrics = [metric if metric in 
