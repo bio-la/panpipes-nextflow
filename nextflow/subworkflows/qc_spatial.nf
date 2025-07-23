@@ -31,7 +31,8 @@ workflow qc_spatial {
 
 
     qc_input_ch = spatial_objects.spatial_data_object.map { zarr_file ->
-    def sample_id = zarr_file.getBaseName().replaceAll(/_raw\.zarr$/, '')
+        def sample_id = zarr_file.getBaseName().replaceAll(/_raw(_unfilt)?\.zarr$/, '')
+    
     tuple(
         sample_id,
         zarr_file,
@@ -40,33 +41,24 @@ workflow qc_spatial {
         params.custom_genes_file != "None" ? file(params.custom_genes_file) : null,
         params.calc_proportions != "None" ? params.calc_proportions : null,
         params.score_genes != "None" ? params.score_genes : null,
-        "${params.outdir}/${params.mode}/figures",
+        //"${params.outdir}/${params.mode}/figures",
         "${sample_id}_adata_unfilt.h5ad"
         )
     }
 
 
-    spatial_qc(qc_input_ch)
+    qc_results = spatial_qc(qc_input_ch)
 
-    // if (params.plotqc.enabled) {
+    plot_input_ch = qc_results.qc_data.map { output_file ->
+    def sample_id = output_file.getSimpleName().replaceAll(/_unfilt\..*$/, '')
+        tuple(
+            sample_id,
+            output_file,
+            params.spatial_filetype,
+            params.grouping_var,
+            params.spatial_qc_metrics
+        )
+    }
 
-    //     plot_input = qc_input.map { tup ->
-    //         def output_file = tup[7]
-    //         tuple(
-    //             output_file,
-    //             params.spatial_filetype,
-    //             params.plotqc.grouping_var,
-    //             params.plotqc.spatial_metrics,
-    //             "./figures"
-    //         )
-    //     }
-
-    //     plot_spatial_qc(
-    //         plot_input.map { it -> it[0] },
-    //         plot_input.map { it -> it[1] },
-    //         plot_input.map { it -> it[2] },
-    //         plot_input.map { it -> it[3] },
-    //         plot_input.map { it -> it[4] }
-    //     )
-    // }
+    plot_spatial_qc(plot_input_ch)
 }

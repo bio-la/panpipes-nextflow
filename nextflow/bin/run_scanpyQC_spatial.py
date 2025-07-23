@@ -26,13 +26,13 @@ from panpipes.funcs.io import write_obs
 parser = argparse.ArgumentParser()
 # required option
 parser.add_argument("--input_anndata",
-                    default="adata_raw.h5ad",
+                    default="adata_raw.zarr",
                     help="")
 parser.add_argument("--spatial_filetype",
                     default="",
                     help="")
 parser.add_argument("--outfile",
-                    default="adata_unfilt.h5ad",
+                    default="adata_unfilt.zarr",
                     help="")
 parser.add_argument("--figdir",
                     default="./figures/",
@@ -163,8 +163,11 @@ single_id = single_id.replace("_raw.h5mu","")
 L.info("Saving updated obs in a metadata tsv file to ./" + single_id + "_cell_metadata.tsv")
 write_obs(sdata["table"], output_prefix=single_id, output_suffix="_cell_metadata.tsv")
 L.info("Saving updated SpatialData to '%s'" % args.outfile)
-#sdata.write(args.outfile)
-sdata["table"].write(args.outfile)
+if args.outfile.endswith(".zarr"):
+    sdata.write(args.outfile)
+# Save only the underlying AnnData object if .h5ad is desired
+elif args.outfile.endswith(".h5ad"):
+    sdata["table"].write_h5ad(args.outfile)
 
 L.info("Done")
 
