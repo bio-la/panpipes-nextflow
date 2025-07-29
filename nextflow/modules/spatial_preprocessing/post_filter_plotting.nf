@@ -19,14 +19,17 @@ process plot {
         path "logs/2-$sample-postfilter-plot.log"
 
     script:
+    def gv = grouping_var ? "--grouping_var ${grouping_var.join(' ')}" : ""
+    def sm = spatial_qc_metrics ? "--spatial_qc_metrics ${spatial_qc_metrics.join(' ')}" : ""
+
     """
     mkdir logs
 
     python ${workflow.projectDir}/bin/plot_qc_spatial.py  \
              --input_spatialdata $filtered_zarr_path  --sample_id $sample\
              --spatial_filetype $spatial_filetype \
-             --grouping_var "${grouping_var}" \
-             --spatial_qc_metrics "${spatial_qc_metrics}" \
+            ${gv} \
+            ${sm} \
             > logs/2-$sample-postfilter-plot.log
     """
 }
