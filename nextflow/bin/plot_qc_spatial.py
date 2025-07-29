@@ -58,8 +58,7 @@ args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
 
-#figdir = args.figdir
-figdir = "figures"
+figdir = args.figdir
 os.makedirs(figdir, exist_ok=True)
 
 sc.settings.figdir = figdir
