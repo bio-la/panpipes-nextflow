@@ -1,0 +1,36 @@
+name: single_cell
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - scipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - scanpy
+  - muon
+  - anndata
+  - pyyaml
+  - sysroot_linux-64  
+  - pip
+  - pip:
+      - panpipes
+      - harmonypy
+      - scvi-tools
+      - cgatcore
+      - scrublet
+      - scirpy
+      - scib-metrics
+
+  - r-base=4.2
+  - r-tidyverse
+  - r-optparse
+  - r-clustree
+  - r-dplyr
+  - r-ggplot2
+  - r-readr
+
