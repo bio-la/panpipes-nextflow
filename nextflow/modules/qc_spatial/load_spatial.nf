@@ -24,7 +24,7 @@ process load_spatial_data {
     }
 
     def visium_args = spatial_filetype == 'visium' ? [
-        "--visium_feature_bc_matrix ${visium_feature_bc_matrix}",   // mandatory
+        "--visium_feature_bc_matrix ${visium_feature_bc_matrix}", 
         flag('scalefactors_file',      visium_scalefactors_file),
         flag('fullres_image_file',     visium_fullres_image_file),
         flag('tissue_positions_file',  visium_tissue_positions_file)

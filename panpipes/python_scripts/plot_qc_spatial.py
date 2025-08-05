@@ -59,7 +59,8 @@ sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
 
 L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
-sdata = sd.read_zarr(args.input_spatialdata)
+#sdata = sd.read_zarr(args.input_spatialdata)
+sdata = sd.read(args.input_spatialdata)
 #mdata = mu.read(args.input_spatialdata)
 #spatial = mdata.mod['spatial']
 

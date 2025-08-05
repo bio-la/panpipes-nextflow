@@ -6,7 +6,7 @@ process plot_spatial_qc {
     tag "$sample_id"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
-    publishDir "${params.outdir}/figures/spatial", mode: 'copy', pattern: "figures/spatial/*.png"
+    publishDir "${params.outdir}/${params.mode}/figures", mode: 'copy', pattern: "figures/*.png"
 
     publishDir "${params.outdir}/${params.mode}/logs", mode: 'copy', pattern: "plot_spatial_qc_*.log"
 
@@ -27,8 +27,9 @@ process plot_spatial_qc {
 
 
     def log_file = "plot_spatial_qc_${sample_id}.log"
-    def figdir  = "${workDir}/figures/spatial"
-
+    //def figdir  = "${workDir}/figures"
+    def figdir = "figures"
+    
     """
     mkdir -p figures/spatial
     python ${workflow.projectDir}/bin/plot_qc_spatial.py \
