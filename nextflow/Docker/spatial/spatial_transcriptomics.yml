@@ -1,0 +1,22 @@
+name: spatial_transcriptomics
+channels:
+- conda-forge
+- bioconda
+- defaults
+dependencies:
+- python>=3.9,<3.12
+- scanpy
+- pandas
+- spatialdata
+- muon
+- anndata
+- numpy
+- matplotlib
+- seaborn
+- pyyaml
+- pip
+- pip:
+  - cell2location
+  - spatialdata-io
+  - tangram-sc
+  - panpipes
