@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Plot spatial transcriptomics data
 '''
@@ -13,6 +14,7 @@ import argparse
 import sys
 import logging
 import re 
+import ast
 import spatialdata as sd
 L = logging.getLogger()
 L.setLevel(logging.INFO)
@@ -31,17 +33,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--input_spatialdata",
                     default="spatialdata_unfilt.h5mu",
                     help="")
+parser.add_argument("--sample_id",
+                    default="Sample1",
+                    help="")
 parser.add_argument("--figdir",
-                    default="./figures/",
+                    default="figures/spatial",
                     help="path to save the figures to")
 parser.add_argument("--spatial_filetype",
                     default="",
                     help="")
 parser.add_argument("--spatial_qc_metrics",
                     default="None",
+                    nargs='+',
                     help="metrics to plot")
 parser.add_argument("--grouping_var",
                     default="None",
+                    nargs='+',
                     help="variables to group the cells by")
 
 
@@ -50,30 +57,24 @@ args, opt = parser.parse_known_args()
 
 L.info("Running with params: %s", args)
 
-figdir = args.figdir
 
-# if not os.path.exists(figdir):
-#     os.mkdir(figdir)
+figdir = args.figdir
+os.makedirs(figdir, exist_ok=True)
 
 sc.settings.figdir = figdir
 sc.set_figure_params(scanpy=True, fontsize=14, dpi=300, facecolor='white', figsize=(5,5))
 
-L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
-#sdata = sd.read_zarr(args.input_spatialdata)
-sdata = sd.read(args.input_spatialdata)
-#mdata = mu.read(args.input_spatialdata)
-#spatial = mdata.mod['spatial']
 
-input_data = os.path.basename(args.input_spatialdata)
-pattern = r"_filtered.zarr"
-match = re.search(pattern, input_data)
-if match is None:
-    match = re.search(r"_unfilt.zarr", input_data)
-sprefix = input_data[:match.start()]
+
+L.info("Reading in SpatialData from '%s'" % args.input_spatialdata)
+sdata = sd.read_zarr(args.input_spatialdata)
+
+L.info(sdata["table"])
 
 # convert string to list of strings
-qc_metrics = list(args.spatial_qc_metrics.split(","))
-group_var = list(args.grouping_var.split(","))
+qc_metrics = [] if args.spatial_qc_metrics == ["None"] else args.spatial_qc_metrics
+
+group_var = [] if args.grouping_var == ["None"] else args.grouping_var
 
 
 # check if metrics in adata.obs or adata.var
@@ -105,15 +106,15 @@ for metric in qc_metrics:
             L.info("Creating violin plot for '%s' of .obs" % metric)
             if group_var is None: 
                 sc.pl.violin(sdata["table"], keys = metric, xlabel = metric+ " in .obs",
-                            save =  "_obs_" + metric+ "_" + "."+sprefix + ".png", show = False)
+                            save =  "_obs_" + metric+ "_" + "."+args.sample_id + ".png", show = False)
             
             else: #plot violin for each group
                 for group in group_var: 
                     sc.pl.violin(sdata["table"], keys = metric,groupby = group, xlabel = group + ", "+ metric+ " in .obs",
-                            save = "_obs_" + metric+ "_" + group+ "."+sprefix +".png", show = False)
+                            save = "_obs_" + metric+ "_" + group+ "."+args.sample_id +".png", show = False)
             #plot spatial 
             L.info("Creating spatial embedding plot for '%s' of .obs" % metric)
-            sc.pl.embedding(sdata["table"],basis="spatial", color = metric, save = "_spatial_" + metric + "."+sprefix +".png", show = False)
+            sc.pl.embedding(sdata["table"],basis="spatial", color = metric, save = "_spatial_" + metric + "."+args.sample_id +".png", show = False)
 
     #check if in adata.var: 
     if metric in sdata["table"].var.columns:
@@ -128,7 +129,7 @@ for metric in qc_metrics:
                     orient='vertical', 
                 )
             ax.set(xlabel=metric+ " in .var" )
-            ax.figure.savefig(figdir + "/" +"violin_var_" + metric + "."+sprefix +".png")
+            ax.figure.savefig(figdir + "/" +"violin_var_" + metric + "."+args.sample_id +".png")
 
 
 
@@ -167,7 +168,7 @@ if args.spatial_filetype == "vizgen":
 
     plt.tight_layout()  # Ensures proper spacing between subplots
     #plt.savefig("merfish_histo.png", dpi=300)
-    plt.savefig(figdir + "/histograms."+sprefix +".png", dpi=300)  # Adjust dpi as needed
+    plt.savefig(figdir + "/histograms."+args.sample_id +".png", dpi=300)  # Adjust dpi as needed
     plt.close()  # Close the figure to free up memory
      
            
