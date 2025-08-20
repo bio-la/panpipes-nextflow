@@ -8,6 +8,7 @@ include { spatial_deconvolution } from './subworkflows/spatial_deconvolution.nf'
 //include {ingest} from './subworkflows/ingest.nf'
 //include {preprocessing} from './subworkflows/preprocessing.nf'
 include { visualisation } from './subworkflows/visualisation.nf'
+include { integration } from './subworkflows/integration.nf'
 
 
 workflow run_qc_spatial {
@@ -40,3 +41,8 @@ workflow visualisation_single_cell {
 
 }
 
+workflow integration_single_cell {
+
+    integration()
+
+}
