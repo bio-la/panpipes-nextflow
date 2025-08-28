@@ -3,7 +3,6 @@ nextflow.enable.dsl=2
 
 include {batch_correct_none} from '../modules/integration/batch_correct_none.nf'
 include {batch_correct_bbknn} from '../modules/integration/batch_correct_bbknn.nf'
-include {batch_correct_combat} from '../modules/integration/batch_correct_combat.nf'
 include {batch_correct_harmony} from '../modules/integration/batch_correct_harmony.nf'
 include {batch_correct_scanorama} from '../modules/integration/batch_correct_scanorama.nf'
 include {batch_correct_scvi} from '../modules/integration/batch_correct_scvi.nf'
@@ -44,11 +43,6 @@ workflow integration {
     
     batch_correct_bbknn(ch_jobs_bbknn)
 
-    //batch correct combat
-    def ch_jobs_combat_rna  = hasTool(params.rna,  'combat') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
-    def ch_jobs_combat_prot = hasTool(params.prot, 'combat') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
-    def ch_jobs_combat = ch_jobs_combat_rna.mix(ch_jobs_combat_prot)
-    batch_correct_combat(ch_jobs_combat)
 
     //batch correct harmony
     def ch_jobs_harmony_rna  = hasTool(params.rna,  'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
@@ -74,10 +68,6 @@ workflow integration {
     umap_bbknn        = batch_correct_bbknn.out.umap_csv
     umap_bbknn_log    = batch_correct_bbknn.out.umap_log
     h5ad_bbknn       = batch_correct_bbknn.out.h5ad
-
-    // COMBAT
-    umap_combat       = batch_correct_combat.out.umap_csv
-    umap_combat_log   = batch_correct_combat.out.umap_log
 
     // HARMONY
     umap_harmony      = batch_correct_harmony.out.umap_csv

@@ -6,6 +6,7 @@ process batch_correct_scanorama {
     conda params.process_conda ?: '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
@@ -13,6 +14,7 @@ process batch_correct_scanorama {
 
     output:
     path "batch_correction/umap_*_scanorama.csv", emit: umap_csv
+    path "tmp/*_${mod}.h5ad",           emit: h5ad 
     path "logs/*_scanorama.log", optional: true, emit: umap_log
 
     when:
@@ -27,12 +29,14 @@ process batch_correct_scanorama {
     def meth  = (params.rna?.neighbors?.method ?: 'scanpy').toString()
     def bsize = params.rna?.scanorama?.batch_size ?: 5000
 
+    def h5ad_out = "tmp/umap_${mod}_scanorama_${mod}.h5ad"
     """
     mkdir -p logs tmp batch_correction
 
     python3 ${workflow.projectDir}/bin/batch_correct_scanorama.py \\
       --input_anndata "${mdata}" \\
       --output_csv "batch_correction/umap_${mod}_scanorama.csv" \\
+      --output_anndata "${h5ad_out}" \\
       --integration_col "${col}" \\
       --modality ${mod} \\
       --neighbors_method ${meth} \\

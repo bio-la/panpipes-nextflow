@@ -52,6 +52,8 @@ parser.add_argument('--batch_size',
                     help="batch size scanorama parameter, default 5000", default="5000")
 parser.add_argument('--modality',
                     help="modality")
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 
@@ -146,9 +148,28 @@ umap = pd.DataFrame(adata.obsm['X_umap'], adata.obs.index)
 L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap.to_csv(args.output_csv)
 
+
+if args.output_anndata is not None:
+    outfile = args.output_anndata
+    # If user passed a directory or forgot the suffix, build a filename
+    if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
+        outfile = os.path.join(outfile, f"scanorama_scaled_adata_{args.modality}.h5ad")
+    outdir = os.path.dirname(outfile)
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+else:
+    # Default: same folder as output_csv, consistent naming
+    base_dir = os.path.dirname(args.output_csv)
+    if base_dir and not os.path.exists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    outfile = os.path.join(base_dir, f"scanorama_scaled_adata_{args.modality}.h5ad")
+
 # save the scanorama dim reduction in case scanorama is our favourite
-L.info("Saving AnnData to 'tmp/scanorama_scaled_adata.h5ad'")
-adata.write("tmp/scanorama_scaled_adata.h5ad")
+#L.info("Saving AnnData to 'tmp/scanorama_scaled_adata.h5ad'")
+#adata.write("tmp/scanorama_scaled_adata.h5ad")
+
+L.info("Saving AnnData to '%s'" % outfile)
+write_anndata(adata, outfile, use_muon=False, modality=args.modality)
 
 L.info("Done")
 
