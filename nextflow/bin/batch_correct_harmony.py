@@ -167,7 +167,7 @@ else:
     # default: same folder as output_csv, same basename but .h5ad
     base = os.path.splitext(os.path.basename(args.output_csv))[0]
     outdir = os.path.dirname(args.output_csv)
-    outfiletmp = os.path.join(outdir, f"{base}_{args.modality}.h5ad")
+    outfiletmp = os.path.join(outdir, f"harmony_scaled_adata_{args.modality}.h5ad")
     if outdir and not os.path.exists(outdir):
         os.makedirs(outdir, exist_ok=True)
 

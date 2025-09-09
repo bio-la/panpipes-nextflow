@@ -13,9 +13,9 @@ process batch_correct_none {
     tuple val(sample_id), path(mdata), val(mod)
 
     output:
-    path "batch_correction/umap_${mod}_none.csv", emit: umap_csv
-    path "tmp/*_${mod}.h5ad", emit: h5ad
-    path "logs/*_no_correct.log", optional: true, emit: umap_log
+    tuple val(sample_id), val(mod), path("batch_correction/umap_*_none.csv"),                 emit: umap_csv
+    tuple val(sample_id), val(mod), path("tmp/no_correction_scaled_adata_*.h5ad"),            emit: h5ad
+    tuple val(sample_id), val(mod), path("logs/*_no_correct.log"), optional: true,            emit: umap_log
 
     script:
     // per-modality config
@@ -31,7 +31,7 @@ process batch_correct_none {
     def dimred_flag = (mod == 'atac') ? "--dimred ${dimred}" : ""
 
     def csv_out  = "batch_correction/umap_${mod}_none.csv"
-    def h5ad_out = "tmp/umap_${mod}_none_${mod}.h5ad"
+    def h5ad_out = "tmp/no_correction_scaled_adata_${mod}.h5ad"
 
     def log_name = (mod == 'rna'  ? '1_rna_no_correct.log'
                 :   mod == 'prot' ? '2_prot_no_correct.log'

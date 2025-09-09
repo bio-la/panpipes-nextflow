@@ -6,6 +6,10 @@ include {batch_correct_bbknn} from '../modules/integration/batch_correct_bbknn.n
 include {batch_correct_harmony} from '../modules/integration/batch_correct_harmony.nf'
 include {batch_correct_scanorama} from '../modules/integration/batch_correct_scanorama.nf'
 include {batch_correct_scvi} from '../modules/integration/batch_correct_scvi.nf'
+include {batch_correct_totalvi} from '../modules/integration/batch_correct_totalvi.nf'
+include {batch_correct_multivi} from '../modules/integration/batch_correct_multivi.nf'
+include {batch_correct_mofa} from '../modules/integration/batch_correct_mofa.nf'
+include {batch_correct_wnn} from '../modules/integration/batch_correct_wnn.nf'
 
 workflow integration {
 
@@ -55,9 +59,27 @@ workflow integration {
     def ch_jobs_scanorama = hasTool(params.rna, 'scanorama') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna') } : Channel.empty()
     batch_correct_scanorama(ch_jobs_scanorama)
 
+    //Multimodal
+
     //scvi RNA only
     def ch_jobs_scvi = hasTool(params.rna, 'scvi') ? ch_mdata.map { m -> tuple(sid_from(m), m) } : Channel.empty()
     batch_correct_scvi(ch_jobs_scvi)
+
+    // totalVI
+    def ch_jobs_totalvi = hasTool(params.multimodal, 'totalvi') ? ch_mdata.map { m -> tuple(sid_from(m), m) } : Channel.empty()
+    batch_correct_totalvi(ch_jobs_totalvi)
+
+    // MultiVI
+    def ch_jobs_multivi = hasTool(params.multimodal, 'multivi') ? ch_mdata.map { m -> tuple(sid_from(m), m) } : Channel.empty()
+    batch_correct_multivi(ch_jobs_multivi)
+
+    // MOFA
+    def ch_jobs_mofa = hasTool(params.multimodal, 'mofa') ? ch_mdata.map { m -> tuple(sid_from(m), m) } : Channel.empty()
+    batch_correct_mofa(ch_jobs_mofa)
+
+    // WNN
+    def ch_jobs_wnn = hasTool(params.multimodal, 'wnn') ? ch_mdata.map { m -> tuple(sid_from(m), m) } : Channel.empty()
+    batch_correct_wnn(ch_jobs_wnn)
 
   emit:
     // NONE
@@ -81,4 +103,28 @@ workflow integration {
     // SCVI
     umap_scvi     = batch_correct_scvi.out.umap_csv
     umap_scvi_log = batch_correct_scvi.out.umap_log
+    scvi_h5ad     = batch_correct_scvi.out.h5ad
+    scvi_model_dir = batch_correct_scvi.out.scvi_model
+
+    // TOTALVI
+    umap_totalvi      = batch_correct_totalvi.out.umap_csv
+    umap_totalvi_log  = batch_correct_totalvi.out.umap_log
+    totalvi_h5mu      = batch_correct_totalvi.out.h5mu
+    totalvi_model_dir = batch_correct_totalvi.out.totalvi_model
+
+    // MULTIVI
+    umap_multivi  = batch_correct_multivi.out.umap_csv
+    multivi_h5mu  = batch_correct_multivi.out.h5mu
+    multivi_log   = batch_correct_multivi.out.multivi_log
+    multivi_model = batch_correct_multivi.out.multivi_model
+
+    // MOFA
+    umap_mofa   = batch_correct_mofa.out.umap
+    mofa_h5mu   = batch_correct_mofa.out.mudata_out
+    mofa_log    = batch_correct_mofa.out.log
+    
+    // WNN
+    umap_wnn     = batch_correct_wnn.out.umap_csv
+    umap_wnn_log = batch_correct_wnn.out.umap_log
+    h5mu_wnn     = batch_correct_wnn.out.h5mu
 }

@@ -5,13 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scvi
 import argparse
-import os
-import gc
+import os, sys, gc, json, pathlib
 import muon as mu
 from cgatcore import pipeline as P
 import anndata as ad
 import panpipes.funcs as pp
-import gc
 from panpipes.funcs.processing import check_for_bool
 from panpipes.funcs.io import read_anndata, write_anndata
 from panpipes.funcs.scmethods import run_neighbors_method_choice, X_is_raw
@@ -49,11 +47,40 @@ parser.add_argument('--neighbors_metric',default="euclidean",
 parser.add_argument('--scvi_seed',default=None,
                     help="set explicitly seed to make runs reproducible")
 
+# Replacing YAML params
+parser.add_argument('--lowmem', default='true',
+                    help="If true, restrict ATAC to ~25k HVFs (like your YAML lowmem)")
+# JSON blobs or files (model / training / plan)
+parser.add_argument('--model_args_json', default=None)
+parser.add_argument('--model_args_json_file', default=None)
+parser.add_argument('--training_args_json', default=None)
+parser.add_argument('--training_args_json_file', default=None)
+parser.add_argument('--training_plan_json', default=None)
+parser.add_argument('--training_plan_json_file', default=None)
 
+parser.add_argument('--output_mudata', default=None,
+                    help="Path to write .h5mu (dir or filename). Default: tmp/multivi_scaled_adata.h5mu")
 
+# Test params
+parser.add_argument('--test_run', default='false',
+                    help="If true, override training to a quick test run")
+parser.add_argument('--test_max_epochs', type=int, default=10,
+                    help="Max epochs to use during --test_run")
 
 args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
+
+#Helpers
+def to_bool(s): return str(s).lower() in ('1','true','t','yes','y')
+
+def _load_json_arg(text=None, file=None):
+    if file:
+        with open(file) as fh: return json.load(fh)
+    if text: return json.loads(text)
+    return {}
+
+def _drop_nones(d): return {k: v for k, v in d.items() if v is not None}
+
 
 # scanpy settings
 sc.set_figure_params(facecolor="white")
@@ -67,12 +94,12 @@ else:
 # load parameters
 
 threads_available = multiprocessing.cpu_count()
-params = pp.io.read_yaml("pipeline.yml")
+#params = pp.io.read_yaml("pipeline.yml")
 
-test_script=False
-if test_script:
-    L.info("this is a test run")
-    params['MultiVI']['training_args']['max_epochs'] = 10
+# test_script=False
+# if test_script:
+#     L.info("this is a test run")
+#     params['MultiVI']['training_args']['max_epochs'] = 10
 
 # ------------------------------------------------------------------
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
@@ -82,15 +109,23 @@ atac = mdata['atac'].copy()
 
 del mdata
 
-if check_for_bool(params["multimodal"]["MultiVI"]["lowmem"]):
-    if 'hvg' in atac.uns.keys():
-        L.info("Subsetting ATAC to HVFs")
+# if check_for_bool(params["multimodal"]["MultiVI"]["lowmem"]):
+#     if 'hvg' in atac.uns.keys():
+#         L.info("Subsetting ATAC to HVFs")
+#         atac = atac[:, atac.var.highly_variable].copy()
+#     L.info("Calculating and subsetting ATAC to top 25k HVF")
+#     sc.pp.highly_variable_genes(atac, n_top_genes=25000)
+#     atac = atac[:, atac.var.highly_variable].copy()
+
+# Optional lowmem ATAC HVF subsetting (replacing YAML)
+if to_bool(args.lowmem):
+    # If you already have HVFs, keep them; also compute top 25k if needed
+    if 'highly_variable' in atac.var.columns and atac.var['highly_variable'].any():
+        L.info("Subsetting ATAC to existing HVFs")
         atac = atac[:, atac.var.highly_variable].copy()
-    L.info("Calculating and subsetting ATAC to top 25k HVF")
+    L.info("Calculating and subsetting ATAC to top 25k HVFs")
     sc.pp.highly_variable_genes(atac, n_top_genes=25000)
     atac = atac[:, atac.var.highly_variable].copy()
-
-
 
 gc.collect()
 
@@ -133,6 +168,7 @@ else:
     L.error("Could not find raw counts for ATAC in .X and .layers['raw_counts']")
     sys.exit("Could not find raw counts for ATAC in .X and .layers['raw_counts']")
 
+
 L.info("Concatenating modalities to comply with multiVI")
 # adata_paired = ad.concat([rna, atac], join="outer")
 # adata_paired.var = pd.concat([rna.var,atac.var])
@@ -170,14 +206,30 @@ adata_mvi = scvi.data.organize_multiome_anndatas(adata_paired)
 
 # MultiVI integrates by modality, to use batch correction you need a batch covariate to specify in
 # categorical_covariate_keys
+columns = []
 if args.integration_col_categorical is not None :
-    cols = [x.strip() for x in args.integration_col_categorical.split(",")]
-    columns = []
-    for cc in cols:
-        if cc in rna_cols:
-            columns.append("rna:"+cc)
+    #cols = [x.strip() for x in args.integration_col_categorical.split(",")]
+    #for cc in cols:
+    for cc in [c.strip() for c in args.integration_col_categorical.split(",") if c.strip()]:
+        # If already prefixed, keep it — but validate it exists in the merged obs
+        if cc.startswith("rna:") or cc.startswith("atac:"):
+            if cc in adata_mvi.obs.columns:
+                columns.append(cc)
+            else:
+                raise ValueError(f"Column '{cc}' not found in adata_mvi.obs")
+        # if cc in rna_cols:
+        #     columns.append("rna:"+cc)
+        # elif cc in atac_cols:
+        #     columns.append("atac:"+cc)
+        
+        # If not prefixed, detect modality and prefix
+        elif cc in rna_cols:
+            columns.append(f"rna:{cc}")
         elif cc in atac_cols:
-            columns.append("atac:"+cc)
+            columns.append(f"atac:{cc}")
+        else:
+            raise ValueError(f"Column '{cc}' not found in RNA or ATAC obs")
+
 if args.integration_col_continuous is not None :
     if args.integration_col_continuous in rna_cols:
         args.integration_col_continuous = "rna:"+ args.integration_col_continuous
@@ -217,43 +269,52 @@ scvi.model.MULTIVI.setup_anndata(
     layer =  "raw_counts",
     **kwargs) 
 #2. setup model
-if params["multimodal"]['MultiVI']['model_args'] is None:
-    multivi_model_args =  {}
-else:
-    multivi_model_args =  {k: v for k, v in params["multimodal"]['MultiVI']['model_args'].items() if v is not None}
+# if params["multimodal"]['MultiVI']['model_args'] is None:
+#     multivi_model_args =  {}
+# else:
+#     multivi_model_args =  {k: v for k, v in params["multimodal"]['MultiVI']['model_args'].items() if v is not None}
+model_args     = _drop_nones(_load_json_arg(args.model_args_json,     args.model_args_json_file))
+training_args  = _drop_nones(_load_json_arg(args.training_args_json,  args.training_args_json_file))
+training_plan  = _drop_nones(_load_json_arg(args.training_plan_json,  args.training_plan_json_file))
+
+# Optional quick test override
+if to_bool(args.test_run):
+    L.info("Test run enabled: setting max_epochs=%d", int(args.test_max_epochs))
+    training_args['max_epochs'] = int(args.test_max_epochs)
+
 
 L.info("Defining model")
 mvi = scvi.model.MULTIVI(
     adata_mvi,
     n_genes=n_genes,
     n_regions=n_regions,
-    **multivi_model_args
+    **model_args
 )
 
 #3.train
 
-if params["multimodal"]["MultiVI"]["training_args"] is None:
-    multivi_training_args={}
-else:
-    multivi_training_args =  {k: v for k, v in params["multimodal"]['MultiVI']['training_args'].items() if v is not None}
+# if params["multimodal"]["MultiVI"]["training_args"] is None:
+#     multivi_training_args={}
+# else:
+#     multivi_training_args =  {k: v for k, v in params["multimodal"]['MultiVI']['training_args'].items() if v is not None}
 
-if params["multimodal"]['MultiVI']['training_plan'] is None:
-    multivi_training_plan = {}
-else:
-    multivi_training_plan =  {k: v for k, v in params["multimodal"]['MultiVI']['training_plan'].items() if v is not None}
+# if params["multimodal"]['MultiVI']['training_plan'] is None:
+#     multivi_training_plan = {}
+# else:
+#     multivi_training_plan =  {k: v for k, v in params["multimodal"]['MultiVI']['training_plan'].items() if v is not None}
 
 mvi.view_anndata_setup()
 
 L.info("training args")
-print(multivi_training_args)
+print(training_args)
 
 
 L.info("training plan")
-print(multivi_training_plan)
+print(training_plan)
 
 
 L.info("Running multiVI")
-mvi.train( **multivi_training_args, **multivi_training_plan)
+mvi.train(**training_args, **training_plan)
 
 mvi.save(os.path.join("batch_correction", "multivi_model"), 
                   anndata=False)
@@ -300,8 +361,22 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(mdata.obsm['X_umap'], mdata.obs.index)
 umap.to_csv(args.output_csv)
 
-L.info("Saving MuData to 'tmp/multivi_scaled_adata.h5mu'")
-write_anndata(mdata, "tmp/multivi_scaled_adata.h5mu",use_muon=False)
+# L.info("Saving MuData to 'tmp/multivi_scaled_adata.h5mu'")
+# write_anndata(mdata, "tmp/multivi_scaled_adata.h5mu",use_muon=False)
+if args.output_mudata:
+    out_path = args.output_mudata
+    if os.path.isdir(out_path) or not out_path.endswith('.h5mu'):
+        out_path = os.path.join(out_path, "multivi_scaled_adata.h5mu")
+else:
+    out_path = "tmp/multivi_scaled_adata.h5mu"
+
+out_dir = os.path.dirname(out_path)
+if out_dir:
+    os.makedirs(out_dir, exist_ok=True)
+
+L.info("Saving MuData to '%s'", out_path)
+mdata.write(out_path)
+
 
 L.info("Done")
 

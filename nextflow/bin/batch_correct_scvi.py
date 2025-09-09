@@ -57,9 +57,13 @@ parser.add_argument('--training_args_json_file', default=None)
 parser.add_argument('--training_plan_json', default=None)
 parser.add_argument('--training_plan_json_file', default=None)
 
-# new: booleans that used to live in YAML
-parser.add_argument('--exclude_mt_genes', default='true')  # "true"/"false"
+# booleans that used to live in YAML
+parser.add_argument('--exclude_mt_genes', default='true')
 parser.add_argument('--mt_column', default='mt')
+
+#outdir for h5ad object
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 args, opt = parser.parse_known_args()
@@ -273,9 +277,22 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(rna.obsm['X_umap'], rna.obs.index)
 umap.to_csv(args.output_csv)
 
+if args.output_anndata is not None:
+    outfile = args.output_anndata
+    # If a directory or missing suffix, build a filename
+    if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
+        outfile = os.path.join(outfile, "scvi_scaled_adata_rna.h5ad")
+else:
+    base_dir = os.path.dirname(args.output_csv) or "."
+    outfile = os.path.join(base_dir, "scvi_scaled_adata_rna.h5ad")
+
+os.makedirs(os.path.dirname(outfile) or ".", exist_ok=True)
+L.info(f"Saving AnnData to '{outfile}'")
+rna.write(outfile)
+
 # save anndata to be used by other scvi tools applications
-L.info("Saving AnnData to 'tmp/scvi_scaled_adata_rna.h5ad'")
-rna.write(os.path.join("tmp", "scvi_scaled_adata_rna.h5ad"))
+#L.info("Saving AnnData to 'tmp/scvi_scaled_adata_rna.h5ad'")
+#rna.write(os.path.join("tmp", "scvi_scaled_adata_rna.h5ad"))
 
 L.info("Done")
 

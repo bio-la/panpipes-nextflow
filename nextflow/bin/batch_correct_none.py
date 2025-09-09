@@ -155,7 +155,7 @@ if args.output_anndata is not None:
 else:
     base = os.path.splitext(os.path.basename(args.output_csv))[0]
     outdir = os.path.dirname(args.output_csv)
-    outfile = os.path.join(outdir, f"{base}_{args.modality}.h5ad")
+    outfile = os.path.join(outdir, f"no_correction_scaled_adata_{args.modality}.h5ad")
 
 #outfiletmp = ("tmp/no_correction_scaled_adata_" + args.modality + ".h5ad" )
 
