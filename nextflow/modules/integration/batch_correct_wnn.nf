@@ -10,12 +10,12 @@ process batch_correct_wnn {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
 
     input:
-        tuple val(sample_id), path(mdata)
+        tuple val(sample_id), path(mdata), val(mod)
 
     output:
-        path "batch_correction/umap_${sample_id}_multimodal_wnn.csv", emit: umap_csv
-        path "logs/${sample_id}_wnn.log",                             emit: umap_log
-        path "tmp/wnn_scaled_adata.h5mu",                             emit: h5mu
+        tuple val(sample_id), val(mod), path ("batch_correction/umap_${mod}_multimodal_wnn.csv"), emit: umap_csv
+        tuple val(sample_id), val(mod), path ("logs/${mod}_wnn.log"),                             emit: umap_log
+        tuple val(sample_id), val(mod), path ("tmp/wnn_scaled_adata.h5mu"),                             emit: h5mu
 
     script:
     // helper to ensure input is a list
@@ -64,13 +64,13 @@ process batch_correct_wnn {
 
     // Output/fig locations
     def figdir = "figures/multimodal/wnn"
-    def outCsv = "batch_correction/umap_${sample_id}_multimodal_wnn.csv"
+    def outCsv = "batch_correction/umap_${mod}_multimodal_wnn.csv"
     def outH5  = "tmp/wnn_scaled_adata.h5mu"
 
     """
     mkdir -p logs tmp batch_correction ${figdir}
 
-    python3 ${projectDir}/bin/batch_correct_wnn.py \\
+    python3 ${workflow.projectDir}/bin/batch_correct_wnn.py \\
         --scaled_anndata "${mdata}" \\
         --modalities "${modalitiesStr}" \\
         --batch_corrected_json '${bcJson}' \\
@@ -95,6 +95,6 @@ process batch_correct_wnn {
         --atac_neighbors_metric ${atac_metric} \\
         --atac_neighbors_n_pcs ${atac_npcs} \\
         --atac_neighbors_k ${atac_k} \\
-        > "logs/${sample_id}_wnn.log" 2>&1
+        > "logs/${mod}_wnn.log" 2>&1
     """
 }

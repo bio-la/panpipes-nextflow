@@ -89,9 +89,26 @@ scanorama_input = adata[adata.obs.sort_values(by="batch").index.tolist(), :]
 
 # filter by HVGs to make it equivalent to the old scripts,
 # which inputted the scaled object after filtering by hvgs.
-L.info("Filtering data by HVGs")
-scanorama_input = scanorama_input[:, scanorama_input.var.highly_variable]
+#L.info("Filtering data by HVGs")
+#scanorama_input = scanorama_input[:, scanorama_input.var.highly_variable]
 #also filter the X_PCA to be the number of PCs we actually want to use
+
+# --- PATCH ---
+# Some inputs may not have `highly_variable` defined in var,
+# so check before subsetting.
+if 'highly_variable' in scanorama_input.var.columns:
+    L.info("Filtering data by HVGs")
+    scanorama_input = scanorama_input[:, scanorama_input.var['highly_variable']]
+else:
+    L.warning("No 'highly_variable' column found in .var; skipping HVG filtering")
+
+if 'X_pca' not in scanorama_input.obsm.keys():
+    L.info("X_pca not found; computing PCA")
+    # choose at least as many PCs as you intend to keep
+    n_pcs_wanted = int(args.neighbors_n_pcs)
+    sc.tl.pca(scanorama_input, n_comps=max(n_pcs_wanted, 50))
+# --- ---
+
 L.info("Subsetting X_pca to %s PCs" % args.neighbors_n_pcs)
 scanorama_input.obsm['X_pca'] = scanorama_input.obsm['X_pca'][:,0:int(args.neighbors_n_pcs)]
 

@@ -12,14 +12,14 @@ process batch_correct_totalvi {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/scvi_model/**', saveAs: { file -> file }
 
     input:
-        tuple val(sample_id), path(mdata)
+        tuple val(sample_id), path(mdata),val(mod)
 
     output:
-        path "batch_correction/umap_${sample_id}_totalvi.csv", emit: umap_csv
-        path "logs/${sample_id}_totalvi.log",                  emit: umap_log
-        path "tmp/totalvi_scaled_adata.h5mu",                  emit: h5mu
-        path "batch_correction/totalvi_model/**",  optional: true, emit: totalvi_model
-        path "figures/**/*.png",            optional: true, emit: figs_dir
+        tuple val(sample_id), val(mod), path ("batch_correction/umap_${mod}_totalvi.csv"), emit: umap_csv
+        tuple val(sample_id), val(mod), path("logs/${mod}_totalvi.log"),                  emit: umap_log
+        tuple val(sample_id), val(mod),path ("tmp/totalvi_scaled_adata.h5mu"),                  emit: h5mu
+        tuple val(sample_id), val(mod),path ("batch_correction/totalvi_model/**"),  optional: true, emit: totalvi_model
+        tuple val(sample_id), val(mod),path ("figures/**/*.png"),            optional: true, emit: figs_dir
 
     script:
     // JSON blobs from config (drop nulls)
@@ -53,9 +53,9 @@ process batch_correct_totalvi {
     """
     mkdir -p logs tmp batch_correction ${figdir}
 
-    python3 ${projectDir}/bin/batch_correct_totalvi.py \\
+    python3 ${workflow.projectDir}/bin/batch_correct_totalvi.py \\
         --scaled_anndata "${mdata}" \\
-        --output_csv "batch_correction/umap_${sample_id}_totalvi.csv" \\
+        --output_csv "batch_correction/umap_${mod}_totalvi.csv" \\
         --output_mudata "${h5mu_out}" \\
         ${catFlag} \\
         ${contFlag} \\
@@ -72,6 +72,6 @@ process batch_correct_totalvi {
         --model_args_json    '${modelArgsJson}' \\
         --training_args_json '${trainingArgsJson}' \\
         --training_plan_json '${trainingPlanJson}' \\
-        > logs/${sample_id}_totalvi.log 2>&1
+        > logs/${mod}_totalvi.log 2>&1
     """
 }

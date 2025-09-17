@@ -11,12 +11,12 @@ process batch_correct_mofa {
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
     input:
-    tuple val(sample_id), path(mudata_file)
+    tuple val(sample_id), path(mudata_file), val(mod)
 
     output:
-        path "batch_correction/umap_${sample_id}_mofa.csv", emit: umap
-        path "tmp/mofa_scaled_adata.h5mu",                emit: mudata_out
-        path "logs/${sample_id}_mofa.log",                emit: log
+        tuple val(sample_id), val(mod),path ("batch_correction/umap_${mod}_mofa.csv"), emit: umap
+        tuple val(sample_id), val(mod),path ("tmp/mofa_scaled_adata.h5mu"),                emit: mudata_out
+        tuple val(sample_id), val(mod),path ("logs/${mod}_mofa.log"),                emit: log
 
     script:
 
@@ -43,8 +43,6 @@ process batch_correct_mofa {
 
     def mofaJson = groovy.json.JsonOutput.toJson(mofaMap)
 
-    //def outCsv = "batch_correction/umap_${sample_id}_mofa.csv"
-    //def outMu  = "tmp/mofa_scaled_adata.h5mu"
     def figdir = "figures/multimodal/mofa"
 
     """
@@ -52,7 +50,7 @@ process batch_correct_mofa {
 
     python3 ${workflow.projectDir}/bin/batch_correct_mofa.py \\
         --scaled_anndata "${mudata_file}" \\
-    --output_csv "batch_correction/umap_${sample_id}_mofa.csv" \\
+    --output_csv "batch_correction/umap_${mod}_mofa.csv" \\
     --output_mudata "tmp/mofa_scaled_adata.h5mu" \\
     --mofa_args_json '${mofaJson}' \\
     ${ modalitiesCli ? "--modalities ${modalitiesCli}" : "" } \\
@@ -61,7 +59,7 @@ process batch_correct_mofa {
     --neighbors_metric ${neighMetric} \\
     --neighbors_n_pcs  ${neighNpcs} \\
     --neighbors_k      ${neighK} \\
-    > logs/${sample_id}_mofa.log 2>&1
+    > logs/${mod}_mofa.log 2>&1
     """
 }
 

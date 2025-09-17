@@ -3,19 +3,20 @@ nextflow.enable.dsl=2
 
 process batch_correct_scanorama {
     tag "$sample_id"
-    conda params.process_conda ?: '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
+    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
-    tuple val(sample_id), path(mdata), val(mod)   // mod should be 'rna' (Scanorama is RNA-only here)
+    tuple val(sample_id), path(mdata), val(mod)
 
     output:
-    path "batch_correction/umap_*_scanorama.csv", emit: umap_csv
-    path "tmp/*_${mod}.h5ad",           emit: h5ad 
-    path "logs/*_scanorama.log", optional: true, emit: umap_log
+    tuple val(sample_id), val(mod), path("logs/*_scanorama.log"), optional: true,            emit: umap_log
+    tuple val(sample_id), val(mod), path("batch_correction/umap_*_scanorama.csv"),                 emit: umap_csv
+    tuple val(sample_id), val(mod), path("tmp/scvi_scaled_adata_rna.h5ad"),            emit: h5ad
+
 
     when:
     mod == 'rna'
@@ -29,7 +30,7 @@ process batch_correct_scanorama {
     def meth  = (params.rna?.neighbors?.method ?: 'scanpy').toString()
     def bsize = params.rna?.scanorama?.batch_size ?: 5000
 
-    def h5ad_out = "tmp/umap_${mod}_scanorama_${mod}.h5ad"
+    def h5ad_out = "tmp/scvi_scaled_adata_rna.h5ad"
     """
     mkdir -p logs tmp batch_correction
 

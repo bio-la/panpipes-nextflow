@@ -14,9 +14,9 @@ process batch_correct_bbknn {
 
     output:
     // Name depends on modality
-    path "batch_correction/umap_*_bbknn.csv", emit: umap_csv
-    path "tmp/*_${mod}.h5ad",           emit: h5ad 
-    path "logs/*_bbknn.log", optional: true, emit: umap_log
+    tuple val(sample_id), val(mod), path("batch_correction/umap_*_bbknn.csv"),                 emit: umap_csv
+    tuple val(sample_id), val(mod), path("tmp/bbknn_scaled_adata_${mod}.h5ad"),            emit: h5ad
+    tuple val(sample_id), val(mod), path("logs/*_bbknn.log"), optional: true,            emit: umap_log
 
     script:
     def cfg = [ rna: params.rna ?: [:], prot: params.prot ?: [:], atac: params.atac ?: [:] ][mod] ?: [:]
@@ -30,8 +30,7 @@ process batch_correct_bbknn {
     def dimred_flag = (mod == 'atac') ? "--dimred ${dimred}" : ""
 
     def csv_out  = "batch_correction/umap_${mod}_bbknn.csv"
-    // The python script will save h5ad next to CSV if --output_anndata omitted
-    def h5ad_out = "tmp/umap_${mod}_bbknn_${mod}.h5ad"
+    def h5ad_out = "tmp/bbknn_scaled_adata_${mod}.h5ad"
     def log_name = (mod == 'rna'  ? '1_rna_bbknn.log'
                 : mod == 'prot' ? '2_prot_bbknn.log'
                 :                 '3_atac_bbknn.log')

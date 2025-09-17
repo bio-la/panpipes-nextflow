@@ -13,14 +13,14 @@ process batch_correct_scvi {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/scvi_model/**', saveAs: { file -> file }
 
     input:
-        tuple val(sample_id), path(mdata)
+        tuple val(sample_id), path(mdata), val(mod)
 
     output:
-        path "batch_correction/umap_${sample_id}_scvi.csv", emit: umap_csv
-        path "tmp/scvi_scaled_adata_rna.h5ad",             emit: h5ad
-        path "logs/rna_${sample_id}_scvi.log",                emit: umap_log
-        path "figures/**/*.png",            optional: true, emit: figs
-        path "batch_correction/scvi_model/**", optional: true, emit: scvi_model
+        tuple val(sample_id), val(mod), path ("batch_correction/umap_${mod}_scvi.csv"), emit: umap_csv
+        tuple val(sample_id), val(mod), path ("tmp/scvi_scaled_adata_rna.h5ad"),             emit: h5ad
+        tuple val(sample_id), val(mod), path ("logs/rna_${mod}_scvi.log"),                emit: umap_log
+        tuple val(sample_id), val(mod), path ("figures/**/*.png"),            optional: true, emit: figs
+        tuple val(sample_id), val(mod), path ("batch_correction/scvi_model/**"), optional: true, emit: scvi_model
 
     script:
     // Build JSON for args, drop nulls
@@ -34,9 +34,9 @@ process batch_correct_scvi {
 
     """
     mkdir -p logs tmp batch_correction ${figdir}
-    python3 ${projectDir}/bin/batch_correct_scvi.py \\
+    python3 ${workflow.projectDir}/bin/batch_correct_scvi.py \\
         --scaled_anndata "${mdata}" \\
-        --output_csv "batch_correction/umap_${sample_id}_scvi.csv" \\
+        --output_csv "batch_correction/umap_${mod}_scvi.csv" \\
         --integration_col "${params.rna?.column ?: 'dataset'}" \\
         --figdir "${figdir}" \\
         --output_anndata "${h5ad_out}" \\
@@ -50,6 +50,6 @@ process batch_correct_scvi {
         --model_args_json      '${modelArgsJson}' \\
         --training_args_json   '${trainingArgsJson}' \\
         --training_plan_json   '${trainingPlanJson}' \\
-        > logs/rna_${sample_id}_scvi.log 2>&1
+        > logs/rna_${mod}_scvi.log 2>&1
     """
 }

@@ -13,9 +13,9 @@ process batch_correct_harmony {
     tuple val(sample_id), path(mdata), val(mod)
 
     output:
-    path "batch_correction/umap_${mod}_harmony.csv", emit: umap_csv
-    path "tmp/*_${mod}.h5ad",           emit: h5ad 
-    path "logs/*_harmony.log", optional: true, emit: umap_log
+    tuple val(sample_id), val(mod), path("batch_correction/umap_*_harmony.csv"),                 emit: umap_csv
+    tuple val(sample_id), val(mod), path("tmp/*_${mod}.h5ad"),            emit: h5ad
+    tuple val(sample_id), val(mod), path("logs/*_harmony.log"), optional: true,            emit: umap_log
 
     // only run if this modality is enabled and has harmony 
     when:
@@ -50,7 +50,7 @@ process batch_correct_harmony {
     //outputs
     def csv_out  = "batch_correction/umap_${mod}_harmony.csv"
     // The python script will save h5ad next to CSV if --output_anndata omitted
-    def h5ad_out = "tmp/umap_${mod}_harmony_${mod}.h5ad"
+    def h5ad_out = "tmp/harmony_scaled_adata_${mod}.h5ad"
     // Log file naming
     def log_name = (mod == 'rna'  ? '1_rna_harmony.log'
                 : mod == 'prot' ? '2_prot_harmony.log'
