@@ -30,8 +30,37 @@ workflow integration {
     def sid_from = { m -> params.sample_prefix ?: (params.sample_id ?: file(m).baseName) }
     def toList   = { x -> x instanceof List ? x : x?.toString()?.split(',')*.trim().findAll{ it } ?: [] }
     
+    def ch_sid_mdata = ch_mdata.map { m -> tuple( sid_from(m), m ) }   // (sid, base.h5mu)
+
+     //  config with or without final_obj
+    def CFG = params.containsKey('final_obj')
+                ? params.final_obj
+                : ( params.containsKey('integration')
+                      ? ( params.integration instanceof Map && params.integration.containsKey('final_obj')
+                            ? params.integration.final_obj
+                            : params.integration )
+                      : [:] )
+
     // For given config modality, if run is true and tool is in the list of tools, return true
     def hasTool  = { cfg, tool -> (cfg?.run) && (toList(cfg?.tools)*.toLowerCase()).contains(tool) }
+
+    // Keep only entries for a given modality *if* the tuple includes a modality in position 1.
+    // If the module already outputs (sid, path) pairs, filter lets them pass.
+    def filterMod = { ch, modname ->
+      ch.filter { t ->
+          (t instanceof Tuple && t.size() >= 3) ? (t[1] == modname) : true
+      }
+    }
+    // Convert (sid, mod?, path) -> (sid, path)
+    def asSidPathItem = { t -> tuple(t[0], t[-1]) }
+
+    // Wrap (sid, path) -> (sid, [path]); pass (sid, []) through unchanged
+    // Wrap (sid, path) into (sid, [path]); leave (sid, [])
+    def wrapList = { t ->
+      def sid = t[0]; def v = t[1]
+      v instanceof List ? tuple(sid, v) : tuple(sid, [v])
+    }
+
 
 
     //batch correct none
@@ -108,7 +137,7 @@ workflow integration {
     // Group all CSVs per sample (sid, [paths])
     def ch_umaps_grouped = ch_umaps_sid_path.groupTuple(by: 0)
 
-    def ch_sid_mdata = ch_mdata.map { m -> tuple( sid_from(m), m ) } // (sid, mdata)
+    //def ch_sid_mdata = ch_mdata.map { m -> tuple( sid_from(m), m ) } // (sid, mdata)
     def ch_for_collate = ch_sid_mdata.join(ch_umaps_grouped) 
 
     collate_umaps( ch_for_collate )
@@ -146,47 +175,137 @@ workflow integration {
 
     run_scib( ch_scib_in )
 
-    def ch_tmp_all = Channel.empty()
+    // Batch correct merge 
+    // Build inputs for merge, lists per modality
+    // RNA
+    def ch_rna_none      = filterMod(batch_correct_none.out.h5ad,        'rna').map(asSidPathItem)
+    def ch_rna_bbknn     = filterMod(batch_correct_bbknn.out.h5ad,       'rna').map(asSidPathItem)
+    def ch_rna_harmony   = filterMod(batch_correct_harmony.out.h5ad,     'rna').map(asSidPathItem)
+    def ch_rna_scanorama = filterMod(batch_correct_scanorama.out.h5ad,   'rna').map(asSidPathItem)
+    def ch_rna_scvi      = filterMod(batch_correct_scvi.out.h5ad,        'rna').map(asSidPathItem)
 
-    [
-      batch_correct_none.out.h5ad,
-      batch_correct_bbknn.out.h5ad,
-      batch_correct_harmony.out.h5ad,
-      batch_correct_scanorama.out.h5ad,
-      batch_correct_scvi.out.h5ad,
-      batch_correct_totalvi.out.h5mu,
-      batch_correct_multivi.out.h5mu,
-      batch_correct_mofa.out.mudata_out,
-      batch_correct_wnn.out.h5mu
-    ].each { ch -> if (ch) ch_tmp_all = ch_tmp_all.mix(ch) }
+    // PROT
+    def ch_prot_none     = filterMod(batch_correct_none.out.h5ad,        'prot').map(asSidPathItem)
+    def ch_prot_harmony  = filterMod(batch_correct_harmony.out.h5ad,     'prot').map(asSidPathItem)
+    def ch_prot_bbknn    = filterMod(batch_correct_bbknn.out.h5ad,       'prot').map(asSidPathItem)
 
-   // Normalise tuple shape -> (sid, path), supporting either (sid, path)
-    def ch_tmp_norm = ch_tmp_all.map { t ->
-      def sid  = t[0]
-      def path = (t.size() >= 3) ? t[2] : t[1]
-      tuple(sid, path)
+    // ATAC
+    def ch_atac_none     = filterMod(batch_correct_none.out.h5ad,        'atac').map(asSidPathItem)
+    def ch_atac_harmony  = filterMod(batch_correct_harmony.out.h5ad,     'atac').map(asSidPathItem)
+    def ch_atac_bbknn    = filterMod(batch_correct_bbknn.out.h5ad,       'atac').map(asSidPathItem)
+
+    // MULTIMODAL
+    def ch_multi_totalvi = batch_correct_totalvi.out.h5mu.map(asSidPathItem)
+    def ch_multi_multivi = batch_correct_multivi.out.h5mu.map(asSidPathItem)
+    def ch_multi_mofa    = batch_correct_mofa.out.mudata_out.map(asSidPathItem)
+    def ch_multi_wnn     = batch_correct_wnn.out.h5mu.map(asSidPathItem)
+
+    //  include=false returns (sid, [])
+    def ch_empty_list = ch_sid_mdata.map { sid, base -> tuple(sid, []) }
+
+    // RNA
+    def rna_choice  = ((CFG?.rna?.bc_choice ?: 'no_correction') as String).toLowerCase()
+    def rna_include = (CFG?.rna?.include ?: false) as boolean
+    def ch_rna_choice_ch = ch_empty_list
+    if( rna_include ) {
+      switch(rna_choice) {
+        case 'no_correction': ch_rna_choice_ch = ch_rna_none;      break
+        case 'bbknn'        : ch_rna_choice_ch = ch_rna_bbknn;     break
+        case 'harmony'      : ch_rna_choice_ch = ch_rna_harmony;   break
+        case 'scanorama'    : ch_rna_choice_ch = ch_rna_scanorama; break
+        case 'scvi'         : ch_rna_choice_ch = ch_rna_scvi;      break
+        default:
+          println "[WARN] Unknown RNA bc_choice='${rna_choice}', using empty list"
+          ch_rna_choice_ch = ch_empty_list
+      }
+    }
+    def ch_rna_list = ch_rna_choice_ch.map(wrapList)
+
+    // PROT
+    def prot_choice  = ((CFG?.prot?.bc_choice ?: 'no_correction') as String).toLowerCase()
+    def prot_include = (CFG?.prot?.include ?: false) as boolean
+    def ch_prot_choice_ch = ch_empty_list
+    if( prot_include ) {
+      switch(prot_choice) {
+        case 'no_correction': ch_prot_choice_ch = ch_prot_none;    break
+        case 'harmony'      : ch_prot_choice_ch = ch_prot_harmony; break
+        case 'bbknn'        : ch_prot_choice_ch = ch_prot_bbknn;   break
+        default:
+          println "[WARN] Unknown PROT bc_choice='${prot_choice}', using empty list"
+          ch_prot_choice_ch = ch_empty_list
+      }
+    }
+    def ch_prot_list = ch_prot_choice_ch.map(wrapList)
+
+    // ATAC
+    def atac_choice  = ((CFG?.atac?.bc_choice ?: 'no_correction') as String).toLowerCase()
+    def atac_include = (CFG?.atac?.include ?: false) as boolean
+    def ch_atac_choice_ch = ch_empty_list
+    if( atac_include ) {
+      switch(atac_choice) {
+        case 'no_correction': ch_atac_choice_ch = ch_atac_none;    break
+        case 'harmony'      : ch_atac_choice_ch = ch_atac_harmony; break
+        case 'bbknn'        : ch_atac_choice_ch = ch_atac_bbknn;   break
+        default:
+          println "[WARN] Unknown ATAC bc_choice='${atac_choice}', using empty list"
+          ch_atac_choice_ch = ch_empty_list
+      }
+    }
+    def ch_atac_list = ch_atac_choice_ch.map(wrapList)
+
+    // MULTIMODAL
+    def multi_choice  = ((CFG?.multimodal?.bc_choice ?: 'wnn') as String).toLowerCase()
+    def multi_include = (CFG?.multimodal?.include ?: false) as boolean
+    def ch_multi_choice_ch = ch_empty_list
+    if( multi_include ) {
+      switch(multi_choice) {
+        case 'totalvi': ch_multi_choice_ch = ch_multi_totalvi; break
+        case 'multivi': ch_multi_choice_ch = ch_multi_multivi; break
+        case 'mofa'   : ch_multi_choice_ch = ch_multi_mofa;    break
+        case 'wnn'    : ch_multi_choice_ch = ch_multi_wnn;     break
+        default:
+          println "[WARN] Unknown MULTIMODAL bc_choice='${multi_choice}', using empty list"
+          ch_multi_choice_ch = ch_empty_list
+      }
+    }
+    def ch_multi_list = ch_multi_choice_ch.map(wrapList)
+
+    // 5) Join and MERGE
+    def ch_merge_in = ch_sid_mdata
+    .join(ch_rna_list)
+    .join(ch_prot_list)
+    .join(ch_atac_list)
+    .join(ch_multi_list)
+    .map { x ->
+      if( x instanceof List && x.size() == 6 && !(x[0] instanceof List) ) {
+        //  [sid, base, rlist, plist, alist, mlist]
+        def (sid, base, rlist, plist, alist, mlist) = x
+        def rL = (rlist instanceof List) ? rlist : [rlist]
+        def pL = (plist instanceof List) ? plist : [plist]
+        def aL = (alist instanceof List) ? alist : [alist]
+        def mL = (mlist instanceof List) ? mlist : [mlist]
+        tuple(sid, base, rL, pL, aL, mL)
+      }
+      else {
+        // nested: (((sid,base),(sid,rlist)),(sid,plist)),(sid,alist)),(sid,mlist)
+        def (ab, r, p, a, m) = x
+        def (sid,    base)  = ab
+        def (sid_r,  rlist) = r
+        def (sid_p,  plist) = p
+        def (sid_a,  alist) = a
+        def (sid_m,  mlist) = m
+        assert sid == sid_r && sid == sid_p && sid == sid_a && sid == sid_m :
+          "Mismatched sample_id across joined channels: ${x}"
+        tuple(sid, base,
+              (rlist instanceof List) ? rlist : [rlist],
+              (plist instanceof List) ? plist : [plist],
+              (alist instanceof List) ? alist : [alist],
+              (mlist instanceof List) ? mlist : [mlist])
+      }
     }
 
-    // Group paths per sample_id
-    def ch_tmp_grouped = ch_tmp_norm.groupTuple(by: 0)
+    batch_correct_merge( ch_merge_in )
 
-    // Base object with stable sid and join
-    def ch_base = Channel
-      .fromPath(params.preprocessed_obj)
-      .map { p -> tuple(sid_const, p) }// (sid, preprocessed_h5mu)
-
-    // Choices
-    def rna_choice = (params.final_obj?.rna?.include && params.final_obj?.rna?.bc_choice && params.final_obj.rna.bc_choice != 'no_correction') ? params.final_obj.rna.bc_choice : null 
-    def prot_choice = (params.final_obj?.prot?.include && params.final_obj?.prot?.bc_choice && params.final_obj.prot.bc_choice != 'no_correction') ? params.final_obj.prot.bc_choice : null 
-    def atac_choice = (params.final_obj?.atac?.include && params.final_obj?.atac?.bc_choice && params.final_obj.atac.bc_choice != 'no_correction') ? params.final_obj.atac.bc_choice : null 
-    def multi_choice = (params.final_obj?.multimodal?.include && params.final_obj?.multimodal?.bc_choice) ? params.final_obj.multimodal.bc_choice : null
-    
-    batch_correct_merge(
-      ch_base.join(ch_tmp_grouped)
-            .map { sid, preprocessed_h5mu, paths ->
-              tuple(sid, preprocessed_h5mu, paths, rna_choice, prot_choice, atac_choice, multi_choice)
-            }
-    )
 
   emit:
     // NONE
@@ -250,6 +369,7 @@ workflow integration {
     scib_files = run_scib.out.scib_files
 
     // Final merged object
-    merged_h5mu       = batch_correct_merge.out.merged_h5mu
-    merged_merge_log  = batch_correct_merge.out.merge_log
+    merged_obj = batch_correct_merge.out.mudata_out
+    merge_log  = batch_correct_merge.out.log
+
 }
