@@ -8,8 +8,7 @@ process run_lisi {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'LISI/**/LISI_scores.csv', saveAs: { file -> file }
     publishDir "${params.outdir}/${params.mode}/integration",mode: 'copy',overwrite: true, pattern: 'logs/run_lisi.log'
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
-
+    
     input:
     // keep tuple order consistent with collate_umaps output:
     // [ sample_id, cell_meta_df, combined_umaps_tsv, batch_dict_yml ]

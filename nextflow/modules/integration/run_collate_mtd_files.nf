@@ -5,8 +5,6 @@ nextflow.enable.dsl=2
     tag "${sample_id}"
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
-    //container "${params.process_container ?: ''}"
 
     input:
     tuple val(sample_id), path(mudata), path(umap_csvs)

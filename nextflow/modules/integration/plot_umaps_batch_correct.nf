@@ -7,7 +7,6 @@ process plot_umaps_batch_correct {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'figures_umaps/**/*.png', saveAs: { file -> file }
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/plot_umaps_batch_correct.log'
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
     input:
     tuple val(sample_id), path(cell_meta_df), path(combined_umaps_tsv), path(batch_dict_yml)

@@ -8,8 +8,8 @@ process batch_correct_mofa {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
+    
     input:
     tuple val(sample_id), path(mudata_file), val(mod)
 

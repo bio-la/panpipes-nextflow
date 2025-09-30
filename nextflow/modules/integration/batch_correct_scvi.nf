@@ -4,7 +4,6 @@ nextflow.enable.dsl=2
 process batch_correct_scvi {
     tag "${sample_id}"
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'

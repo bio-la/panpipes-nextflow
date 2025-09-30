@@ -7,8 +7,7 @@ process run_scib {
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'scib/**/*.{png,csv}', saveAs: { file -> file }
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/run_scib.log'
 
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
-
+    
     input:
     tuple val(sample_id), path(combined_umaps_tsv), path(cell_meta_df), path(batch_yml)
 

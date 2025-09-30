@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 
 process batch_correct_merge {
     tag { sample_id }
-    conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
+
 
     publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: '*.h5mu'
 
