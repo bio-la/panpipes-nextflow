@@ -8,6 +8,7 @@ import argparse
 import os
 import gc
 import muon as mu
+import json, pathlib
 
 from panpipes.funcs.io import read_anndata, read_yaml
 from panpipes.funcs.scmethods import run_neighbors_method_choice, X_is_raw
@@ -49,11 +50,37 @@ parser.add_argument('--neighbors_metric',default="euclidean",
 parser.add_argument('--scvi_seed',default=None,
                     help="set explicitly seed to make runs reproducible")
     
-    
+parser.add_argument('--exclude_mt_genes', default='true')
+parser.add_argument('--mt_column', default='mt')
+parser.add_argument('--filter_by_hvg', default='true')
+parser.add_argument('--filter_prot_outliers', default='false')
 
+# JSON blobs or files
+parser.add_argument('--model_args_json', default=None)
+parser.add_argument('--model_args_json_file', default=None)
+parser.add_argument('--training_args_json', default=None)
+parser.add_argument('--training_args_json_file', default=None)
+parser.add_argument('--training_plan_json', default=None)
+parser.add_argument('--training_plan_json_file', default=None)
+
+parser.add_argument('--output_mudata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
+
+# Helpers to replace YAML functionality
+def to_bool(s): return str(s).lower() in ('1','true','t','yes','y')
+
+def _load_json_arg(text=None, file=None):
+    if file:
+        with open(file) as fh: return json.load(fh)
+    if text: return json.loads(text)
+    return {}
+
+def _drop_nones(d): return {k: v for k, v in d.items() if v is not None}
+
+
 # scanpy settings
 sc.set_figure_params(facecolor="white")
 sc.settings.autoshow = False
@@ -69,15 +96,13 @@ else:
 
 threads_available = multiprocessing.cpu_count()
 
-params = read_yaml("pipeline.yml")
-params['sample_prefix']
-
-
+#params = read_yaml("pipeline.yml")
+#params['sample_prefix']
 
 test_script=False
-if test_script:
-    L.info("this is a test run")
-    params['multimodal']['totalvi']['training_args']['max_epochs'] = 10
+# if test_script:
+#     L.info("this is a test run")
+#     params['multimodal']['totalvi']['training_args']['max_epochs'] = 10
 
 # ------------------------------------------------------------------
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
@@ -92,6 +117,8 @@ rna = mdata['rna'].copy()
 prot = mdata['prot'].copy()
 
 kwargs={}
+batch_categories = None
+
 # in case of more than 1 variable, create a fake column with combined information
 if args.integration_col_categorical is not None :
     columns = [x.strip() for x in args.integration_col_categorical.split(",")]
@@ -103,9 +130,9 @@ if args.integration_col_categorical is not None :
         # make sure that batch is a categorical
         rna.obs["bc_batch"] = rna.obs["bc_batch"].astype("category")
     else:
-        rna.obs['bc_batch'] = rna.obs[columns] #since it's one
+        rna.obs['bc_batch'] = rna.obs[columns[0]] #since it's one
         rna.obs["bc_batch"] = rna.obs["bc_batch"].astype("category")
-    batch_categories = list(rna.obs['bc_batch'].unique())
+    batch_categories = list(rna.obs['bc_batch'].cat.categories)
     kwargs["batch_key"] = "bc_batch"
 else:
     batch_categories = None
@@ -135,12 +162,22 @@ else:
     rna.layers["counts"] = sc_raw.X.copy()
 
 # filter prot outliers 
-if params['multimodal']['totalvi']['filter_prot_outliers']:
-    # for this to work the user needs to (manually) make a column called prot_outliers
-    # actually there is a thing in the qc pipe that calculates outliers, I don't like it very much though
-    if "prot_outliers" in mdata['prot'].columns:
-        L.info("Filtering out prot outliers")
+# if params['multimodal']['totalvi']['filter_prot_outliers']:
+#     # for this to work the user needs to (manually) make a column called prot_outliers
+#     # actually there is a thing in the qc pipe that calculates outliers, I don't like it very much though
+#     if "prot_outliers" in mdata['prot'].columns:
+#         L.info("Filtering out prot outliers")
+#         mu.pp.filter_obs(mdata, "prot_outliers")
+#     else:
+#         raise ValueError("'prot_outliers' column not found in mdata['prot'].obs")
+
+if to_bool(args.filter_prot_outliers):
+    if "prot_outliers" in mdata['prot'].obs.columns:
+        L.info("Filtering out protein outliers via obs['prot_outliers']")
         mu.pp.filter_obs(mdata, "prot_outliers")
+        # re-copy views after filtering
+        rna  = mdata['rna'].copy()
+        prot = mdata['prot'].copy()
     else:
         raise ValueError("'prot_outliers' column not found in mdata['prot'].obs")
 
@@ -150,15 +187,26 @@ if 'isotype' in prot.var.columns:
     prot = prot[:, ~prot.var.isotype]
 
 # filter out mitochondria
-if params['multimodal']['totalvi']['exclude_mt_genes']:
-    L.info("Filtering out mitochondrial genes")
-    rna = rna[:, ~rna.var[params['multimodal']['totalvi']['mt_column']]]
+# if params['multimodal']['totalvi']['exclude_mt_genes']:
+#     L.info("Filtering out mitochondrial genes")
+#     rna = rna[:, ~rna.var[params['multimodal']['totalvi']['mt_column']]]
+if to_bool(args.exclude_mt_genes) and args.mt_column in rna.var.columns:
+    L.info("Filtering out mitochondrial genes via var['%s']", args.mt_column)
+    rna = rna[:, ~rna.var[args.mt_column]]
     
 # filter by Hvgs
 
-if params['multimodal']['totalvi']['filter_by_hvg']:
-    L.info("Filtering by HVGs")
-    rna = rna[:, rna.var.highly_variable]
+# if params['multimodal']['totalvi']['filter_by_hvg']:
+#     L.info("Filtering by HVGs")
+#     rna = rna[:, rna.var.highly_variable]
+
+# filter by HVGs
+if to_bool(args.filter_by_hvg):
+    if "highly_variable" in rna.var.columns:
+        L.info("Filtering RNA by HVGs")
+        rna = rna[:, rna.var['highly_variable'].astype(bool).values]
+    else:
+        L.warning("No 'highly_variable' column; skipping HVG filtering")
 
 mdata.update()
 
@@ -202,31 +250,41 @@ scvi.model.TOTALVI.setup_anndata(
     **kwargs
 )
 
-if params['multimodal']['totalvi']['model_args'] is None:
-    totalvi_model_args =  {}
-else:
-    totalvi_model_args =  {k: v for k, v in params['multimodal']['totalvi']['model_args'].items() if v is not None}
+# if params['multimodal']['totalvi']['model_args'] is None:
+#     totalvi_model_args =  {}
+# else:
+#     totalvi_model_args =  {k: v for k, v in params['multimodal']['totalvi']['model_args'].items() if v is not None}
 
 
-if params['multimodal']['totalvi']['training_args'] is None:
-    totalvi_training_args = {}
-else:
-    totalvi_training_args =  {k: v for k, v in params['multimodal']['totalvi']['training_args'].items() if v is not None}
+# if params['multimodal']['totalvi']['training_args'] is None:
+#     totalvi_training_args = {}
+# else:
+#     totalvi_training_args =  {k: v for k, v in params['multimodal']['totalvi']['training_args'].items() if v is not None}
 
 
-if params['multimodal']['totalvi']['training_plan'] is None:
-    totalvi_training_plan = {}
-else:
-    totalvi_training_plan =  {k: v for k, v in params['multimodal']['totalvi']['training_plan'].items() if v is not None}
+# if params['multimodal']['totalvi']['training_plan'] is None:
+#     totalvi_training_plan = {}
+# else:
+#     totalvi_training_plan =  {k: v for k, v in params['multimodal']['totalvi']['training_plan'].items() if v is not None}
 
-print(totalvi_model_args)
-print(totalvi_training_args)
-print(totalvi_training_plan)
+# print(totalvi_model_args)
+# print(totalvi_training_args)
+# print(totalvi_training_plan)
+
+model_args     = _drop_nones(_load_json_arg(args.model_args_json,     args.model_args_json_file))
+training_args  = _drop_nones(_load_json_arg(args.training_args_json,  args.training_args_json_file))
+training_plan  = _drop_nones(_load_json_arg(args.training_plan_json,  args.training_plan_json_file))
+
+L.info("model_args: %s", model_args)
+L.info("training_args: %s", training_args)
+L.info("training_plan: %s", training_plan)
 
 L.info("Defining model")
-vae = scvi.model.TOTALVI(rna, **totalvi_model_args)
+#vae = scvi.model.TOTALVI(rna, **totalvi_model_args)
+vae = scvi.model.TOTALVI(rna, **model_args)
 L.info("Running totalVI")
-vae.train(**totalvi_training_args, plan_kwargs=totalvi_training_plan)
+vae.train(**training_args, plan_kwargs=(training_plan or None))
+#vae.train(**totalvi_training_args, plan_kwargs=totalvi_training_plan)
 
 vae.save(os.path.join("batch_correction", "totalvi_model"), 
                   anndata=False, overwrite=True )
@@ -306,8 +364,20 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(mdata.obsm['X_umap'], mdata['rna'].obs.index)
 umap.to_csv(args.output_csv)
 
-L.info("Saving MuData to 'tmp/totalvi_scaled_adata.h5mu'")
-mdata.write("tmp/totalvi_scaled_adata.h5mu")
+#L.info("Saving MuData to 'tmp/totalvi_scaled_adata.h5mu'")
+#mdata.write("tmp/totalvi_scaled_adata.h5mu")
+
+if args.output_mudata:
+    out_path = args.output_mudata
+    # If a directory or wrong suffix, normalize to *.h5mu inside
+    if os.path.isdir(out_path) or not out_path.endswith('.h5mu'):
+        out_path = os.path.join(out_path, "totalvi_scaled_adata.h5mu")
+else:
+    out_path = "tmp/totalvi_scaled_adata.h5mu"
+
+L.info("Saving MuData to '%s'", out_path)
+mdata.write(out_path)
+
 
 L.info("Done")
 

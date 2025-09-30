@@ -40,6 +40,8 @@ parser.add_argument('--neighbors_n_pcs', default='50',
                     help='How many top neighbours to report for each batch; total number of neighbours will be this number times the number of batches.')
 parser.add_argument('--modality', default='',
                     help='which mod to run bbknn on')
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 args, opt = parser.parse_known_args()
@@ -109,12 +111,26 @@ umap = pd.DataFrame(adata.obsm['X_umap'], adata.obs.index)
 umap.to_csv(args.output_csv)
 
 
+if args.output_anndata is not None:
+    outfile = args.output_anndata
+    # If user passed a directory or forgot the suffix, build a filename
+    if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
+        outfile = os.path.join(outfile, f"bbknn_scaled_adata_{args.modality}.h5ad")
+    outdir = os.path.dirname(outfile)
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+else:
+    # Default: same folder as output_csv, consistent naming
+    base_dir = os.path.dirname(args.output_csv)
+    if base_dir and not os.path.exists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    outfile = os.path.join(base_dir, f"bbknn_scaled_adata_{args.modality}.h5ad")
 
 # save full bbknn anndata in tmp, cause need more than just neighbors to work 
-outfiletmp = ("tmp/bbknn_scaled_adata_" + args.modality + ".h5ad" )
+#outfiletmp = ("tmp/bbknn_scaled_adata_" + args.modality + ".h5ad" )
 
-L.info("Saving AnnData to '%s'" % outfiletmp)
-write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
+L.info("Saving AnnData to '%s'" % outfile)
+write_anndata(adata, outfile, use_muon=False, modality=args.modality)
 
 L.info("Done")
 

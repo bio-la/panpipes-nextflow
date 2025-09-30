@@ -52,6 +52,8 @@ parser.add_argument('--neighbors_k',
                     help="neighbors k")
 parser.add_argument('--neighbors_metric',
                     help="neighbor metric, e.g. euclidean or cosine")
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 args, opt = parser.parse_known_args()
@@ -149,7 +151,26 @@ umap.to_csv(args.output_csv)
 #adata.write("tmp/harmony_scaled_adata_" + args.modality + ".h5ad")
 
 
-outfiletmp = ("tmp/harmony_scaled_adata_" + args.modality + ".h5ad" )
+#outfiletmp = ("tmp/harmony_scaled_adata_" + args.modality + ".h5ad" )
+#L.info("Saving AnnData to '%s'" % outfiletmp)
+#write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
+
+if args.output_anndata is not None:
+    outfiletmp = args.output_anndata
+    # If the user accidentally gave a directory instead of a file, append default name
+    if os.path.isdir(outfiletmp) or not outfiletmp.endswith(".h5ad"):
+        outfiletmp = os.path.join(outfiletmp, f"harmony_scaled_adata_{args.modality}.h5ad")
+    outdir = os.path.dirname(outfiletmp)
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+else:
+    # default: same folder as output_csv, same basename but .h5ad
+    base = os.path.splitext(os.path.basename(args.output_csv))[0]
+    outdir = os.path.dirname(args.output_csv)
+    outfiletmp = os.path.join(outdir, f"harmony_scaled_adata_{args.modality}.h5ad")
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+
 L.info("Saving AnnData to '%s'" % outfiletmp)
 write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
 
