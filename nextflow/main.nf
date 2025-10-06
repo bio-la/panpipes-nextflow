@@ -6,7 +6,7 @@ include { spatial_preprocess } from './subworkflows/spatial_preprocessing.nf'
 include { spatial_clustering } from './subworkflows/spatial_clustering.nf'
 include { spatial_deconvolution } from './subworkflows/spatial_deconvolution.nf'
 //include {ingest} from './subworkflows/ingest.nf'
-//include {preprocessing} from './subworkflows/preprocessing.nf'
+include { preprocess } from './subworkflows/preprocess.nf'
 
 
 workflow run_qc_spatial {
@@ -32,4 +32,11 @@ workflow deconvolution_spatial{
     spatial_deconvolution()
     
 }
+
+workflow preprocess_single_cell {
+
+    preprocess()
+    
+}
+
 
