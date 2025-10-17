@@ -53,7 +53,7 @@ parser.add_argument('--exclude', default="exclude",
 
 # highly variable genes options
 parser.add_argument('--flavor', default='seurat')
-parser.add_argument('--n_top_genes', default=None)
+parser.add_argument('--n_top_genes', type=int, default=None)
 parser.add_argument('--min_mean', default=0.0125)
 parser.add_argument('--max_mean', default=3)
 parser.add_argument('--min_disp', default=0.5)
@@ -65,7 +65,7 @@ parser.add_argument('--regress_out', default=None)
 parser.add_argument('--scale', default=True, type=check_for_bool)
 parser.add_argument('--scale_max_value', default=None)
 # pca options
-parser.add_argument("--n_pcs", default=50)
+parser.add_argument("--n_pcs", type=int,default=50)
 parser.add_argument("--pca_solver", default="arpack")
 parser.add_argument("--color_by", default="batch") 
 

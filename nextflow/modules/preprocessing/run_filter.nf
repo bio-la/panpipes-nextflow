@@ -4,7 +4,8 @@ nextflow.enable.dsl=2
 process run_filter {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/preprocess/filter", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
     tuple val(sample_id), path (mdata_in), val (prefix), val (filter_map), val (intersect_mods), val (keep_barcodes_path)
@@ -13,7 +14,7 @@ process run_filter {
     path "${sample_id}_filtered.h5mu",              emit: h5mu
     path "${sample_id}_filtered_filtered_cell_metadata.tsv", emit: cellmeta
     path "${sample_id}_filtered_cell_counts.csv",            emit: counts
-    path "filtering.log",                        emit: log
+    path "logs/1_filtering.log",                        emit: log
 
 
     script:
@@ -24,13 +25,13 @@ process run_filter {
 
 
     """
-
+    mkdir -p logs
     python3 ${workflow.projectDir}/bin/run_filter.py \\
         --input_mudata   "${mdata_in}" \\
         --output_mudata  "${sample_id}_filtered.h5mu" \\
         --filter_json    '${filter_arg}' \\
         ${intersectOpt} \\
-        ${keepOpt} 2>&1 | tee -a filtering.log
+        ${keepOpt} > "logs/1_filtering.log" 2>&1
 
     """
 }

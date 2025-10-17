@@ -44,10 +44,10 @@ parser.add_argument("--output_mudata",
 parser.add_argument("--figdir",
                     default="./figures/atac",
                     help="path to save the figures to")
-parser.add_argument("--binarize",
+parser.add_argument("--binarize", type=lambda s: s in ['True','true','1'],
                     default=False,
                     help="whether to binarize the peak counts matrix before any other normalization, like TFIDF")
-parser.add_argument("--normalize",
+parser.add_argument("--normalize",type=lambda s: s in ['True','true','1'],
                     default="TFIDF",
                     help="what operation to use to normalize data. Options are: log1p, TFIDF, None")
 parser.add_argument("--TFIDF_flavour",
@@ -82,7 +82,7 @@ parser.add_argument("--feature_selection_flavour",
 parser.add_argument("--min_cutoff",
                     default=None,
                     help="cutoff for Signac's HVF selection")
-parser.add_argument("--filter_by_hvf", default=False) 
+parser.add_argument("--filter_by_hvf",type=lambda s: s in ['True','true','1'], default=False) 
 parser.add_argument("--color_by", default="batch") 
 
 
