@@ -10,11 +10,12 @@ process preprocess_prot {
 
     input:
         tuple val(sample_id), path(mudata_in)
-        val prot_map                           // e.g. params.prot as a map
+        val prot_map
 
     output:
         tuple val(sample_id), path("${sample_id}_prot_preprocessed.h5mu"), emit: mudata_prot_preprocessed
         path "${sample_id}_prot_figures", optional: true, emit: figures
+        path "logs/6_prot_preprocess.log", emit: log
 
     script:
         def TF = { b -> (b in [true,'true','True','1',1]) ? 'True' : 'False' }
@@ -27,7 +28,6 @@ process preprocess_prot {
         def store_as_x   = prot_map.store_as_X ?: prot_map.store_as_x
         def save_mtx     = prot_map.save_norm_prot_mtx ?: false
 
-        // DSB options
         def bg_mudata    = prot_map.background_obj
         def qclip        = prot_map.quantile_clipping
         def f_bg         = bg_mudata ? "--bg_mudata ${bg_mudata}" : ""

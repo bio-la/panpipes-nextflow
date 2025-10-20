@@ -7,7 +7,6 @@ process downsample {
     publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
-        // (prefix, input .h5mu)
         tuple val(sample_id), path(input_mudata)
 
         val downsample_value

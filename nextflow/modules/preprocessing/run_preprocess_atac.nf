@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process preprocess_atac {
     tag { sample_id }
 
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_atac", mode: 'copy', overwrite: true, pattern: '*.h5mu'
+    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: '*.h5mu'
     publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_atac", mode: 'copy', overwrite: true, pattern: '*_atac_figures'
     publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_atac", mode: 'copy', overwrite: true, pattern: '*.tsv'
     publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
@@ -14,7 +14,7 @@ process preprocess_atac {
         val atac_map 
 
     output:
-        tuple val(sample_id), path("${sample_id}_atac_preprocessed.h5mu"), emit: mudata_atac_preprocessed
+        tuple val(sample_id), path("${sample_id}_preprocessed.h5mu"), emit: mudata_atac_preprocessed
         path "${sample_id}_atac_figures", optional: true, emit: figures
         path "filtered_variable_features.tsv", optional: true,emit: filtered_variable_features
         path "logs/5_atac_preprocess.log", emit: log
@@ -62,7 +62,7 @@ process preprocess_atac {
 
         python3 ${workflow.projectDir}/bin/run_preprocess_atac.py \
         --input_mudata ${input_mudata} \
-        --output_mudata ${sample_id}_atac_preprocessed.h5mu \
+        --output_mudata ${sample_id}_preprocessed.h5mu \
         --use_muon ${use_muon} \
         --figdir ${figdir} \
         \

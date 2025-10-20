@@ -4,7 +4,6 @@ nextflow.enable.dsl=2
 process run_filter {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true
     publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:

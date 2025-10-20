@@ -29,7 +29,7 @@ workflow preprocess {
             .fromPath(params.unfiltered_obj, checkIfExists: true)
             .set { ch_mdata }
 
-    // keep_barcodes passed as VALUE (string or null) — no optional path inputs
+    // keep_barcodes passed as value (string or null)
     def keep_path_str = params.filtering?.keep_barcodes?.toString()?.trim()
     if( keep_path_str == '' ) keep_path_str = null
 
@@ -41,7 +41,6 @@ workflow preprocess {
     filtered_h5mu = run_filter.out.h5mu
     filtered_meta = run_filter.out.cellmeta
     filtered_cnts = run_filter.out.counts
-    filter_log    = run_filter.out.log
 
     // Plot QC
     filtered_meta
@@ -69,18 +68,14 @@ workflow preprocess {
     plotqc_post_dir = plot_QC.out.plotqc_dir
     plotqc_post_counts = plot_QC.out.filtered_counts
 
+    //Downsample
 
-    // Build the expected (prefix, h5mu) tuples for DOWNSAMPLE
+    // Build the expected (prefix, h5mu) tuples for downsample
     run_filter.out.h5mu
     .map { h5mu -> tuple(derivePrefix(h5mu), h5mu) }
     .set { ds_in_filtered }
 
-    // (Optional) If PLOT_QC expects (prefix, meta.tsv), ensure that too:
-    run_filter.out.cellmeta
-    .map { meta -> tuple(derivePrefix(meta), meta) }
-    .set { pf_meta_ch }
-
-    // Conditional downsample (unchanged)
+    // Conditional downsample
     def do_downsample = (params.downsample_n as Integer ?: 0) > 0
 
     if (do_downsample) {
@@ -130,6 +125,9 @@ workflow preprocess {
     filtered_h5mu
     filtered_meta
     filtered_cnts
-    filter_log
+    prot_mudata = preprocess_prot.out.mudata_prot_preprocessed
+    prot_figs   = preprocess_prot.out.figures
+    atac_mudata = preprocess_atac.out.mudata_atac_preprocessed
+    atac_figs   = preprocess_atac.out.figures
 
 }

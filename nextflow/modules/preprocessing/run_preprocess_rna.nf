@@ -13,11 +13,11 @@ process preprocess_rna {
 
     tuple val(sample_id), path(input_mudata)
     val use_muon
-    val hvg_map         // map from config (never null; use [:] if missing)
-    val regress_out     // string or '' 
+    val hvg_map
+    val regress_out
     val do_scale
-    val scale_max_value // string or ''
-    val pca_map         // map from config (never null; use [:] if missing)
+    val scale_max_value
+    val pca_map
 
     output:
     tuple val(sample_id),path ("${sample_id}_rna_preprocessed.h5mu"), emit: mudata_rna_preprocessed
@@ -29,7 +29,7 @@ process preprocess_rna {
     script:
     def TF = { b -> b ? 'True' : 'False' }
     def asBool = { x ->
-        x in [true, 'true', 'True', '1', 1]   // normalize mixed sources
+        x in [true, 'true', 'True', '1', 1]
     }
 
     def useMuon        = TF( asBool(use_muon) )

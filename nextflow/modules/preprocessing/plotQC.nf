@@ -8,7 +8,6 @@ process plot_QC {
     publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
 input:
-    // (prefix, cell_metadata.tsv)
     tuple val(sample_id), path(cell_metadata)
 
     val groupingvar
