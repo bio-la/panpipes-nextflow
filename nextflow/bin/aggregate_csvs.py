@@ -2,6 +2,7 @@
 import argparse
 import pandas as pd
 import re
+import os
 
 
 from panpipes.funcs.processing import  extract_parameter_from_fname
@@ -35,18 +36,21 @@ args = parser.parse_args()
 
 L.info("Running with params: %s", args)
 
-infiles = re.split(',', args.input_files_str)
+infiles = re.split(' ', args.input_files_str)
 if args.clusters_or_markers == "clusters":
     L.info("Aggregating cluster columns")
     combined_csv = pd.concat([pd.read_csv(f, sep='\t', index_col=0) for f in infiles], axis=1)
     # get colnames
     cnames = []
     for f in infiles:
-        alg = extract_parameter_from_fname(f, 'alg', prefix=args.sample_prefix)
-        res = extract_parameter_from_fname(f, 'res', prefix=args.sample_prefix)
-        cnames.append(alg + '_res_' + str(res))
+        filename = os.path.basename(f).split("-")      
+        alg = filename[2]
+        res = filename[3]
+        mod = filename[0]
+        cnames.append(mod + "_" + alg + '_res_' + str(res))
+    L.info(cnames)
     L.info("Saving combined cluster columns to tsv file '%s'" % args.output_file)
-    combined_csv.to_csv(args.output_file, sep='\t', header=cnames, index=True)
+    combined_csv.to_csv("clusters/" + args.output_file, sep='\t', header=cnames, index=True)
 
 
 if args.clusters_or_markers == "markers":

@@ -158,8 +158,8 @@ L.info(f"Dimensions of the marker file are: {mf.shape[0]} rows and {mf.shape[1]}
 ch=mf[mf['avg_logFC'] > 0]
 if mf.shape[0]>=2:
     # get layer
-    if args.modality != "spatial":
-        adata.obs[args.group_col] = mdata.obs[args.group_col]
+    #if args.modality != "spatial":
+    #    adata.obs[args.group_col] = mdata.obs[args.group_col]
     do_plots(adata,
                 mod=args.modality, 
                 group_col=args.group_col,
