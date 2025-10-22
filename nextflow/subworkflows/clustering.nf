@@ -17,10 +17,10 @@ workflow clustering_sc {
 
     /*1. Run Neighbors*/
     // 1. Only include modalities where `params.modalities[modality] == true`
-    // 2. Exclude multimodal if `dim_red == 'wnn'`
+    // 2. Exclude multimodal if `multimodal_integration_method == 'wnn'`
 
     def filtered_neighbors = params.neighbors.findAll { modality, cfg ->
-        params.modalities.get(modality, false) && (modality != 'multimodal' || cfg.dim_red != 'wnn')
+        params.modalities.get(modality, false) && (modality != 'multimodal' || params.multimodal_integration_method != 'wnn')
     }
     def neighbor_dict = toJson(filtered_neighbors)
     neighbor_zarr_ch = run_neighbors(params.input_h5mu, params.sample_id,neighbor_dict, params.n_threads).neighbor_zarr_ch
