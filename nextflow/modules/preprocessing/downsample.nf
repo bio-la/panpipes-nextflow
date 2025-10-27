@@ -26,7 +26,7 @@ process downsample {
 
 
     if( downsample_value == null || downsample_value.toString().trim() == '' ) {
-    throw new IllegalArgumentException("downsample_value is required (params.downsample_n)")
+        throw new IllegalArgumentException("downsample_value is required (params.downsample_n)")
     }
 
     """

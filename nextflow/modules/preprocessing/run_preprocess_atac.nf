@@ -65,15 +65,12 @@ process preprocess_atac {
         --output_mudata ${sample_id}_preprocessed.h5mu \
         --use_muon ${use_muon} \
         --figdir ${figdir} \
-        \
         --binarize ${binarize} \
         --normalize ${normalize} \
         --TFIDF_flavour ${tfidf} \
-        \
         --feature_selection_flavour ${feat_sel} \
         ${f_fhvf} \
         ${f_min_mean} ${f_max_mean} ${f_min_disp} ${f_ntop} ${f_mincut} \
-        \
         --dimred ${dimred} \
         --n_comps ${n_comps} \
         --pca_solver ${solver} \
