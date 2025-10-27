@@ -71,7 +71,6 @@ bcs = adata.obs_names.tolist()
 columns = [x.strip() for x in args.integration_col.split(",")]
 if len(columns) > 1:
     L.info("Using 2 columns to integrate on more variables")
-    # comb_columns = "_".join(columns)
     adata.obs["comb_columns"] = adata.obs[columns].apply(lambda x: '|'.join(x), axis=1)
 
     # make sure that batch is a categorical
@@ -85,10 +84,6 @@ batches = adata.obs['batch'].unique()
 # need contiguous batches
 scanorama_input = adata[adata.obs.sort_values(by="batch").index.tolist(), :]
 
-
-# --- PATCH ---
-# Some inputs may not have `highly_variable` defined in var,
-# so check before subsetting.
 if 'highly_variable' in scanorama_input.var.columns:
     L.info("Filtering data by HVGs")
     scanorama_input = scanorama_input[:, scanorama_input.var['highly_variable']]
@@ -100,7 +95,6 @@ if 'X_pca' not in scanorama_input.obsm.keys():
     # choose at least as many PCs as you intend to keep
     n_pcs_wanted = int(args.neighbors_n_pcs)
     sc.tl.pca(scanorama_input, n_comps=max(n_pcs_wanted, 50))
-# --- ---
 
 L.info("Subsetting X_pca to %s PCs" % args.neighbors_n_pcs)
 scanorama_input.obsm['X_pca'] = scanorama_input.obsm['X_pca'][:,0:int(args.neighbors_n_pcs)]
@@ -151,14 +145,12 @@ umap.to_csv(args.output_csv)
 
 if args.output_anndata is not None:
     outfile = args.output_anndata
-    # If user passed a directory or forgot the suffix, build a filename
     if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
         outfile = os.path.join(outfile, f"scanorama_scaled_adata_{args.modality}.h5ad")
     outdir = os.path.dirname(outfile)
     if outdir and not os.path.exists(outdir):
         os.makedirs(outdir, exist_ok=True)
 else:
-    # Default: same folder as output_csv, consistent naming
     base_dir = os.path.dirname(args.output_csv)
     if base_dir and not os.path.exists(base_dir):
         os.makedirs(base_dir, exist_ok=True)
