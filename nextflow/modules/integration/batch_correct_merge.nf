@@ -41,8 +41,5 @@ process batch_correct_merge {
         ${atacArg} \\
         --prefer_multimodal ${prefer} \\
         > logs/batch_correct_merge.log 2>&1
-
-    # Fail fast si no hay salida
-    test -s mdata_corrected.h5mu || { echo "ERROR: missing mdata_corrected.h5mu"; tail -n 200 logs/batch_correct_merge.log || true; exit 1; }
     """
 }

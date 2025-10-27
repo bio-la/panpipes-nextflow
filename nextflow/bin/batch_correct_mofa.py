@@ -97,7 +97,6 @@ sc.settings.figdir = args.figdir
 # load parameters
 
 threads_available = multiprocessing.cpu_count()
-#params = pp.io.read_yaml("pipeline.yml")
 
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
 mdata = mu.read(args.scaled_anndata)
@@ -152,31 +151,10 @@ else:
 L.info("Intersecting modality obs before running mofa")
 mu.pp.intersect_obs(tmp)
 
-#mofa_kwargs={}
+
 mofa_kwargs = _drop_nones(_load_json_arg(args.mofa_args_json, args.mofa_args_json_file))
 mofa_kwargs.pop('neighbors', None)
 mofa_kwargs.pop('modalities', None)
-
-
-#expected args:
-# n_factors: 10
-# n_iterations: 1000
-# convergence_mode: fast, medium, slow
-# save_parameters: False
-# #if save_parameters True, set the following, otherwise leave blank
-# outfile_model:
-
-# mofa_kwargs = params['multimodal']['mofa']
-# del mofa_kwargs['modalities']
-
-# if mofa_kwargs['filter_by_hvg']:
-#     mofa_kwargs['use_var'] = "highly_variable"
-#     del mofa_kwargs['filter_by_hvg']
-#     for mod in tmp.mod.keys():
-#         if "highly_variable" not in tmp[mod].var.columns:
-#             tmp[mod].var["highly_variable"] = True
-        
-#     tmp.update()
 
 if 'filter_by_hvg' in mofa_kwargs:
     filter_by_hvg = to_bool(mofa_kwargs.pop('filter_by_hvg'))
@@ -204,16 +182,6 @@ if args.integration_col_categorical is not None:
     if args.integration_col_categorical in tmp.obs.columns:
         mofa_kwargs['groups_label'] = args.integration_col_categorical
 
-# default is to read yaml and parse directly to kwargs.
-# if the defaults expected params are parsed by the script in some other way
-# they will overwrite the initial reading of the yml
-
-# if mofa_kwargs['save_parameters'] is None:
-#     if args.save_parameters is not None:
-#         mofa_kwargs['save_parameters'] = check_for_bool(args.save_parameters)
-#         if args.outfile_model is not None:
-#             mofa_kwargs['outfile'] = args.outfile_model
-
 def _nonempty(x):
     return x is not None and str(x).strip() != ""
 
@@ -224,8 +192,6 @@ if sp is None and _nonempty(args.save_parameters):
     if _nonempty(args.outfile_model):
         mofa_kwargs['outfile'] = args.outfile_model
 
-# added str(args.xxx).strip() because Nextflow/Groovy often passes “unset”
-# params as empty strings, not None
 
 # n_factors
 if mofa_kwargs.get('n_factors', None) is None and _nonempty(args.n_factors):
