@@ -35,7 +35,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument('--atac_obj', default=None, help='Path to ATAC .h5ad (overrides inferred tmp/* path)')
     p.add_argument('--multi_obj', default=None, help='Path to integrated .h5mu (WNN/MOFA/TOTALVI); overrides inferred path')
     p.add_argument('--prefer_multimodal', default='true',
-                   help='true/false (default true): if a multimodal object is provided, prefer it first')
+                    help='true/false (default true): if a multimodal object is provided, prefer it first')
 
     return p
 
@@ -98,9 +98,6 @@ def preserve_totalvi_obsm(mm: mu.MuData) -> Dict[str, Dict[str, object]]:
 
 
 
-
-
-# --------- Top-level script (no main guard) ---------
 parser = build_arg_parser()
 args = parser.parse_args()
 
@@ -110,7 +107,7 @@ if not is_real_file(base_object):
     L.error(f"Base MuData not found: {base_object}")
     sys.exit(2)
 
-# Build inferred paths from choices (original behaviour)
+# Build inferred paths from choices
 uni_mod_paths: Dict[str, Optional[str]] = {}
 
 if args.rna_correction_choice and args.rna_correction_choice.lower() != "no_correction":
@@ -123,7 +120,7 @@ if args.atac_correction_choice and args.atac_correction_choice.lower() != "no_co
 multi_mod = args.multimodal_correction_choice.lower() if args.multimodal_correction_choice else None
 inferred_multi_path = os.path.join("tmp", f"{multi_mod}_scaled_adata.h5mu") if multi_mod else None
 
-# NEW: Override with explicit object paths when provided
+# Override with explicit object paths when provided
 prefer_multi = str(getattr(args, 'prefer_multimodal', 'true')).lower() in ('1', 'true', 'yes', 'y')
 
 if args.rna_obj:
@@ -139,7 +136,7 @@ multi_path = args.multi_obj if args.multi_obj else inferred_multi_path
 L.info(f"Reading base MuData: {base_object}")
 base = mu.read(base_object)
 
-present_modalities = set(base.mod.keys())  # typically {'rna','prot','atac'}
+present_modalities = set(base.mod.keys())
 if not present_modalities:
     L.warning("Base MuData has no modalities; will still write output after merge attempts.")
 

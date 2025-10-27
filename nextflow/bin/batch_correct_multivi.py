@@ -96,11 +96,6 @@ else:
 threads_available = multiprocessing.cpu_count()
 #params = pp.io.read_yaml("pipeline.yml")
 
-# test_script=False
-# if test_script:
-#     L.info("this is a test run")
-#     params['MultiVI']['training_args']['max_epochs'] = 10
-
 # ------------------------------------------------------------------
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
 mdata = mu.read(args.scaled_anndata)
@@ -109,17 +104,9 @@ atac = mdata['atac'].copy()
 
 del mdata
 
-# if check_for_bool(params["multimodal"]["MultiVI"]["lowmem"]):
-#     if 'hvg' in atac.uns.keys():
-#         L.info("Subsetting ATAC to HVFs")
-#         atac = atac[:, atac.var.highly_variable].copy()
-#     L.info("Calculating and subsetting ATAC to top 25k HVF")
-#     sc.pp.highly_variable_genes(atac, n_top_genes=25000)
-#     atac = atac[:, atac.var.highly_variable].copy()
-
-# Optional lowmem ATAC HVF subsetting (replacing YAML)
+# Optional lowmem ATAC HVF subsetting
 if to_bool(args.lowmem):
-    # If you already have HVFs, keep them; also compute top 25k if needed
+
     if 'highly_variable' in atac.var.columns and atac.var['highly_variable'].any():
         L.info("Subsetting ATAC to existing HVFs")
         atac = atac[:, atac.var.highly_variable].copy()
@@ -129,11 +116,6 @@ if to_bool(args.lowmem):
 
 gc.collect()
 
-# if "modality" not in atac.var.keys():
-#     atac.var["modality"] = "Peaks"
-
-# if "modality" not in rna.var.keys():
-#     rna.var["modality"] = "Gene Expression"
 
 if rna.shape[0] == atac.shape[0]:
     n=int(rna.shape[0])
@@ -159,7 +141,7 @@ else:
 
 
 if "raw_counts" in atac.layers.keys():
-     L.info("Found raw ATAC counts in .layers['raw_counts']")
+    L.info("Found raw ATAC counts in .layers['raw_counts']")
 elif X_is_raw(atac):
     # this means the X layer is already raw and we can make the layer we need
     L.info("Found raw ATAC counts in .X. Saving raw ATAC counts to .layers['raw_counts']")
@@ -193,8 +175,6 @@ if "modality" not in adata_paired.obs.columns:
     adata_paired.obs["modality"] = "paired" 
 
 
-# adata = ad.concat([rna,atac],join="outer")
-# adata.var = pd.concat([rna.var,atac.var])
 
 del [rna , atac ]
 gc.collect()
@@ -217,10 +197,6 @@ if args.integration_col_categorical is not None :
                 columns.append(cc)
             else:
                 raise ValueError(f"Column '{cc}' not found in adata_mvi.obs")
-        # if cc in rna_cols:
-        #     columns.append("rna:"+cc)
-        # elif cc in atac_cols:
-        #     columns.append("atac:"+cc)
         
         # If not prefixed, detect modality and prefix
         elif cc in rna_cols:
@@ -238,7 +214,7 @@ if args.integration_col_continuous is not None :
 
 
 kwargs = {}
-# in case of more than 1 variable, create a fake column with combined information
+
 if columns is not None:
     print(columns)
     if len(columns) > 1:
@@ -261,18 +237,14 @@ if args.integration_col_continuous is not None :
 
 
 # 1 setup anndata
-#scvi.model.MULTIVI.setup_anndata(adata_mvi, batch_key='modality', **kwargs)
+
 L.info("Setting up AnnData")
 scvi.model.MULTIVI.setup_anndata(
     adata_mvi, 
     batch_key='modality',
     layer =  "raw_counts",
     **kwargs) 
-#2. setup model
-# if params["multimodal"]['MultiVI']['model_args'] is None:
-#     multivi_model_args =  {}
-# else:
-#     multivi_model_args =  {k: v for k, v in params["multimodal"]['MultiVI']['model_args'].items() if v is not None}
+# 2 setup model
 model_args     = _drop_nones(_load_json_arg(args.model_args_json,     args.model_args_json_file))
 training_args  = _drop_nones(_load_json_arg(args.training_args_json,  args.training_args_json_file))
 training_plan  = _drop_nones(_load_json_arg(args.training_plan_json,  args.training_plan_json_file))
@@ -293,16 +265,6 @@ mvi = scvi.model.MULTIVI(
 
 #3.train
 
-# if params["multimodal"]["MultiVI"]["training_args"] is None:
-#     multivi_training_args={}
-# else:
-#     multivi_training_args =  {k: v for k, v in params["multimodal"]['MultiVI']['training_args'].items() if v is not None}
-
-# if params["multimodal"]['MultiVI']['training_plan'] is None:
-#     multivi_training_plan = {}
-# else:
-#     multivi_training_plan =  {k: v for k, v in params["multimodal"]['MultiVI']['training_plan'].items() if v is not None}
-
 mvi.view_anndata_setup()
 
 L.info("training args")
@@ -317,7 +279,7 @@ L.info("Running multiVI")
 mvi.train(**training_args, **training_plan)
 
 mvi.save(os.path.join("batch_correction", "multivi_model"), 
-                  anndata=False)
+                    anndata=False)
 
 L.info("Plotting ELBO")
 plt.plot(mvi.history["elbo_train"], label="train")
@@ -338,7 +300,7 @@ L.info("""We support the use of mudata as a general framework for multimodal dat
 mdata = mu.read(args.scaled_anndata)
 L.info("Extracting latent space and saving latent to X_MultiVI")
 mdata.obsm["X_MultiVI"] = mvi.get_latent_representation()
-#adata_mvi.obsm["X_MultiVI"] = mvi.get_latent_representation()
+
 
 if int(args.neighbors_n_pcs) > mdata.obsm['X_MultiVI'].shape[1]:
     L.warn(f"N PCs is larger than X_MultiVI dimensions, reducing n PCs to  {mdata.obsm['X_MultiVI'].shape[1] -1}")
@@ -361,8 +323,7 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(mdata.obsm['X_umap'], mdata.obs.index)
 umap.to_csv(args.output_csv)
 
-# L.info("Saving MuData to 'tmp/multivi_scaled_adata.h5mu'")
-# write_anndata(mdata, "tmp/multivi_scaled_adata.h5mu",use_muon=False)
+
 if args.output_mudata:
     out_path = args.output_mudata
     if os.path.isdir(out_path) or not out_path.endswith('.h5mu'):

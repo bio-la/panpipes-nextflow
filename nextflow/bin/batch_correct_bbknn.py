@@ -56,7 +56,7 @@ mdata = mu.read(args.input_anndata)
 adata = mdata.mod[args.modality] 
 
 nnb = int(args.neighbors_within_batch)
-# bbknn can't integrate on 2+ variables, so create a fake column with combined information
+
 columns = [x.strip() for x in args.integration_col.split(",")]
 
 if args.dimred == "PCA":
@@ -126,8 +126,6 @@ else:
         os.makedirs(base_dir, exist_ok=True)
     outfile = os.path.join(base_dir, f"bbknn_scaled_adata_{args.modality}.h5ad")
 
-# save full bbknn anndata in tmp, cause need more than just neighbors to work 
-#outfiletmp = ("tmp/bbknn_scaled_adata_" + args.modality + ".h5ad" )
 
 L.info("Saving AnnData to '%s'" % outfile)
 write_anndata(adata, outfile, use_muon=False, modality=args.modality)

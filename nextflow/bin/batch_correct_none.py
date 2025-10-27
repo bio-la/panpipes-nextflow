@@ -64,7 +64,6 @@ if os.path.exists(args.input_anndata):
                 args.modality, ", ".join(mods))
         sys.exit(1)
     adata = mdata.mod[args.modality]
-    #adata = mu.read(args.input_anndata +"/" + args.modality)
 else:
     L.info("missing input anndata")
 
@@ -91,7 +90,6 @@ if int(args.neighbors_n_pcs) > 0:
     pc_kwargs['use_rep'] = dimred
     pc_kwargs['n_pcs'] = int(args.neighbors_n_pcs)
 else:
-    # need to push scanpy to use .X if use_rep is None.
     pc_kwargs['use_rep'] = None
     pc_kwargs['n_pcs'] = int(args.neighbors_n_pcs)
 
@@ -129,15 +127,6 @@ run_neighbors_method_choice(adata,
     metric=args.neighbors_metric, 
     nthreads=max([threads_available, 6]), **pc_kwargs)
 
-# Avoid forcing too many threads
-# We already define number of cores in nextflow config
-# consider adding this change
-# L.info("Computing neighbors")
-# run_neighbors_method_choice(adata, 
-#     method=args.neighbors_method, 
-#     n_neighbors=int(args.neighbors_k), 
-#     metric=args.neighbors_metric, 
-#     nthreads = min(int(args.n_threads), threads_available), **pc_kwargs)
 
 L.info("Computing UMAP")
 # For reproducibility

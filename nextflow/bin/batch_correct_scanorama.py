@@ -63,13 +63,11 @@ L.info("Running with params: %s", args)
 
 # Scanorama is designed to be used in scRNA-seq pipelines downstream of noise-reduction methods,
 # including those for imputation and highly-variable gene filtering.
-#adata = read_anndata(args.input_anndata, use_muon=use_muon, modality="rna")
 L.info("Reading in MuData from '%s'" % args.input_anndata)
 mdata = mu.read(args.input_anndata)
 adata = mdata.mod[args.modality] 
 bcs = adata.obs_names.tolist()
 
-# scanorama can't integrate on 2+ variables, so create a fake column with combined information
 columns = [x.strip() for x in args.integration_col.split(",")]
 if len(columns) > 1:
     L.info("Using 2 columns to integrate on more variables")
@@ -87,11 +85,6 @@ batches = adata.obs['batch'].unique()
 # need contiguous batches
 scanorama_input = adata[adata.obs.sort_values(by="batch").index.tolist(), :]
 
-# filter by HVGs to make it equivalent to the old scripts,
-# which inputted the scaled object after filtering by hvgs.
-#L.info("Filtering data by HVGs")
-#scanorama_input = scanorama_input[:, scanorama_input.var.highly_variable]
-#also filter the X_PCA to be the number of PCs we actually want to use
 
 # --- PATCH ---
 # Some inputs may not have `highly_variable` defined in var,
@@ -118,16 +111,6 @@ L.info("Running scanorama")
 
 sce.pp.scanorama_integrate(scanorama_input, key='batch', batch_size=int(args.batch_size))
 
-# not integrated
-
-# old method (simplified)
-# alldata = {}
-# for bb in batches:
-#     alldata[bb] = scanorama_input[scanorama_input.obs['batch'] == bb]
-#
-# adatas = list(alldata.values())
-# X_scanorama = scanorama.integrate_scanpy(adatas)
-# scanorama_input.obsm['X_scanorama'] = np.concatenate(X_scanorama)
 
 # put into the original order
 scanorama_input = scanorama_input[bcs, :]
@@ -181,9 +164,6 @@ else:
         os.makedirs(base_dir, exist_ok=True)
     outfile = os.path.join(base_dir, f"scanorama_scaled_adata_{args.modality}.h5ad")
 
-# save the scanorama dim reduction in case scanorama is our favourite
-#L.info("Saving AnnData to 'tmp/scanorama_scaled_adata.h5ad'")
-#adata.write("tmp/scanorama_scaled_adata.h5ad")
 
 L.info("Saving AnnData to '%s'" % outfile)
 write_anndata(adata, outfile, use_muon=False, modality=args.modality)
