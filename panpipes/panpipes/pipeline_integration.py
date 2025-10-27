@@ -256,6 +256,8 @@ def run_scvi(outfile):
         cmd += " --neighbors_k %s" % neighbor_params['k']
     cmd += " > logs/1_rna_scvi.log "
     job_kwargs = {}
+    if PARAMS['condaenv'] is not None:
+        job_kwargs["job_condaenv"] =PARAMS['condaenv']
     if PARAMS['queues_gpu'] is not None:
         job_kwargs["job_queue"] = PARAMS['queues_gpu']
         job_kwargs["job_threads"] = int(PARAMS['resources_threads_gpu'])

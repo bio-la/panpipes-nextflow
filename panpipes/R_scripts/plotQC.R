@@ -23,7 +23,7 @@ do_scatter_plot <- function(df, x, y, facet=NULL, hue=NULL){
 }
 
 do_violin_plot <- function(df, qc, group){
-  g <- df %>% drop_na() %>%
+  g <- df %>% drop_na(qc) %>%
     ggplot(aes_string(x="sample_id",y=qc)) +
     geom_violin(aes_string(fill=group)) + 
     {if(qc=="doublet_scores") geom_hline(yintercept=0.25, color="grey50", linetype="dashed") }+
@@ -32,6 +32,9 @@ do_violin_plot <- function(df, qc, group){
     theme_bw()+
     theme(axis.text.x=element_text(size=8, angle=90),
           axis.text.y=element_text(size=8))
+  if(nrow(df) == 0){
+    print("Warning - metadata dataframe was empty after dropping NA values")
+  }
   if(length(unique(df[[group]])) > 10){
     print(paste(sc, "has too many categories, removing legend"))
     g <- g + theme(legend.position="none")
