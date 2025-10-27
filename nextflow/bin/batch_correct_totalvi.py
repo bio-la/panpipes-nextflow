@@ -96,13 +96,8 @@ else:
 
 threads_available = multiprocessing.cpu_count()
 
-#params = read_yaml("pipeline.yml")
-#params['sample_prefix']
 
 test_script=False
-# if test_script:
-#     L.info("this is a test run")
-#     params['multimodal']['totalvi']['training_args']['max_epochs'] = 10
 
 # ------------------------------------------------------------------
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
@@ -125,12 +120,11 @@ if args.integration_col_categorical is not None :
     columns =[ x.replace("rna:","") for x in columns]
     if len(columns) > 1:
         L.info("Using 2 columns to integrate on more variables")
-        # bc_batch = "_".join(columns)
         rna.obs["bc_batch"] = rna.obs[columns].apply(lambda x: '|'.join(x), axis=1)
         # make sure that batch is a categorical
         rna.obs["bc_batch"] = rna.obs["bc_batch"].astype("category")
     else:
-        rna.obs['bc_batch'] = rna.obs[columns[0]] #since it's one
+        rna.obs['bc_batch'] = rna.obs[columns[0]]
         rna.obs["bc_batch"] = rna.obs["bc_batch"].astype("category")
     batch_categories = list(rna.obs['bc_batch'].cat.categories)
     kwargs["batch_key"] = "bc_batch"
@@ -161,15 +155,6 @@ else:
     L.info("Saving raw RNA counts to .layers['counts]")
     rna.layers["counts"] = sc_raw.X.copy()
 
-# filter prot outliers 
-# if params['multimodal']['totalvi']['filter_prot_outliers']:
-#     # for this to work the user needs to (manually) make a column called prot_outliers
-#     # actually there is a thing in the qc pipe that calculates outliers, I don't like it very much though
-#     if "prot_outliers" in mdata['prot'].columns:
-#         L.info("Filtering out prot outliers")
-#         mu.pp.filter_obs(mdata, "prot_outliers")
-#     else:
-#         raise ValueError("'prot_outliers' column not found in mdata['prot'].obs")
 
 if to_bool(args.filter_prot_outliers):
     if "prot_outliers" in mdata['prot'].obs.columns:
@@ -186,19 +171,10 @@ if 'isotype' in prot.var.columns:
     L.info("Excluding isotypes")
     prot = prot[:, ~prot.var.isotype]
 
-# filter out mitochondria
-# if params['multimodal']['totalvi']['exclude_mt_genes']:
-#     L.info("Filtering out mitochondrial genes")
-#     rna = rna[:, ~rna.var[params['multimodal']['totalvi']['mt_column']]]
 if to_bool(args.exclude_mt_genes) and args.mt_column in rna.var.columns:
     L.info("Filtering out mitochondrial genes via var['%s']", args.mt_column)
     rna = rna[:, ~rna.var[args.mt_column]]
-    
-# filter by Hvgs
 
-# if params['multimodal']['totalvi']['filter_by_hvg']:
-#     L.info("Filtering by HVGs")
-#     rna = rna[:, rna.var.highly_variable]
 
 # filter by HVGs
 if to_bool(args.filter_by_hvg):
@@ -250,26 +226,6 @@ scvi.model.TOTALVI.setup_anndata(
     **kwargs
 )
 
-# if params['multimodal']['totalvi']['model_args'] is None:
-#     totalvi_model_args =  {}
-# else:
-#     totalvi_model_args =  {k: v for k, v in params['multimodal']['totalvi']['model_args'].items() if v is not None}
-
-
-# if params['multimodal']['totalvi']['training_args'] is None:
-#     totalvi_training_args = {}
-# else:
-#     totalvi_training_args =  {k: v for k, v in params['multimodal']['totalvi']['training_args'].items() if v is not None}
-
-
-# if params['multimodal']['totalvi']['training_plan'] is None:
-#     totalvi_training_plan = {}
-# else:
-#     totalvi_training_plan =  {k: v for k, v in params['multimodal']['totalvi']['training_plan'].items() if v is not None}
-
-# print(totalvi_model_args)
-# print(totalvi_training_args)
-# print(totalvi_training_plan)
 
 model_args     = _drop_nones(_load_json_arg(args.model_args_json,     args.model_args_json_file))
 training_args  = _drop_nones(_load_json_arg(args.training_args_json,  args.training_args_json_file))
@@ -300,7 +256,6 @@ plt.savefig(os.path.join(args.figdir, "totalvi_elbo_plot.png"))
 
 # scvi.model..view_anndata_setup(vae.adata)
 
-# we want to put things back in the original mdata
 
 L.info("""We support the use of mudata as a general framework for multimodal data
         For this reason, the object we save is not the classical anndata
@@ -363,9 +318,6 @@ sc.tl.leiden(mdata, key_added="leiden_totalVI")
 L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(mdata.obsm['X_umap'], mdata['rna'].obs.index)
 umap.to_csv(args.output_csv)
-
-#L.info("Saving MuData to 'tmp/totalvi_scaled_adata.h5mu'")
-#mdata.write("tmp/totalvi_scaled_adata.h5mu")
 
 if args.output_mudata:
     out_path = args.output_mudata

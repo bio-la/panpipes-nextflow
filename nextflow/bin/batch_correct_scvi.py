@@ -124,7 +124,6 @@ else:
     L.error("Unknown file type. File not MuData or Anndata")
     sys.exit("Unknown file type. File not MuData or Anndata")
 
-# this is a copy so we can subset vars and obs without changing the original object
 
 
 # in case of more than 1 variable, create a fake column with combined information
@@ -162,11 +161,6 @@ if to_bool(args.exclude_mt_genes) and args.mt_column in rna.var.columns:
     L.info("Filtering out mitochondrial genes via column '%s'" % args.mt_column)
     rna = rna[:, ~rna.var[args.mt_column]]
 
-#Deprecated old filter mt    
-# filter out mitochondria
-# if params['rna']['scvi']['exclude_mt_genes']:
-#     L.info("Filtering out mitochondrial genes")
-#     rna = rna[:, ~rna.var[params['rna']['scvi']['mt_column']]]
 
 # filter by Hvgs
 L.info("Filtering by HVGs")
@@ -183,22 +177,8 @@ if test_script:
 
 rna = rna.copy()
 
-#is raw_counts mandatory? 
-# L.info("Setting up AnnData")
-# scvi.model.SCVI.setup_anndata(
-#     rna,
-#     layer="raw_counts",
-#     batch_key='bc_batch'
-# )
-scvi.model.SCVI.setup_anndata(rna, layer="raw_counts" if "raw_counts" in rna.layers else None, batch_key='bc_batch')
 
-# Deprecated old way of loading parameters from YAML
-#scvi_model_args =  {k: v for k, v in params['rna']['scvi']['model_args'].items() if v is not None}
-#print(scvi_model_args)
-#scvi_training_args =  {k: v for k, v in params['rna']['scvi']['training_args'].items() if v is not None}
-#print(scvi_training_args)
-#scvi_training_plan =  {k: v for k, v in params['rna']['scvi']['training_plan'].items() if v is not None}
-#print(scvi_training_plan)
+scvi.model.SCVI.setup_anndata(rna, layer="raw_counts" if "raw_counts" in rna.layers else None, batch_key='bc_batch')
 
 model_args     = _drop_nones(_load_json_arg(args.model_args_json,     args.model_args_json_file))
 training_args  = _drop_nones(_load_json_arg(args.training_args_json,  args.training_args_json_file))
@@ -213,13 +193,12 @@ L.info("Defining model")
 #vae = scvi.model.SCVI(rna, **scvi_model_args) 
 vae = scvi.model.SCVI(rna, **model_args)
 L.info("Running scVI")
-#vae.train(**scvi_training_args, plan_kwargs=scvi_training_plan) 
 vae.train(**training_args, plan_kwargs=training_plan or None)
 
 L.info("Finished Training now saving model")
 os.makedirs("batch_correction", exist_ok=True)
 vae.save(os.path.join("batch_correction", "scvi_model"), 
-                  anndata=False)
+                    anndata=False)
 
 # no early stopping?
 L.info("Plotting ELBO")
@@ -234,7 +213,6 @@ for i, kk in enumerate(vae.history.keys()):
 fig.tight_layout()
 plt.savefig(os.path.join(args.figdir, "scvi_metrics.png"))
 
-# vae.history['elbo_train']['elbo_train'].to_list()
 L.info("Extracting latent space")
 latent = vae.get_latent_representation()
 L.info("Saving latent to X_scVI")
@@ -253,7 +231,6 @@ if int(args.neighbors_n_pcs) > rna.obsm['X_scVI'].shape[1]:
 n_pcs= min(int(args.neighbors_n_pcs), rna.obsm['X_scVI'].shape[1]-1)
 
 # use scVI latent space for UMAP generation
-# sc.pp.neighbors(rna,n_neighbors=int(args.n_neighbors), use_rep="X_scVI")
 L.info("Computing neighbors")
 run_neighbors_method_choice(rna, 
     method=args.neighbors_method, 
@@ -290,9 +267,6 @@ os.makedirs(os.path.dirname(outfile) or ".", exist_ok=True)
 L.info(f"Saving AnnData to '{outfile}'")
 rna.write(outfile)
 
-# save anndata to be used by other scvi tools applications
-#L.info("Saving AnnData to 'tmp/scvi_scaled_adata_rna.h5ad'")
-#rna.write(os.path.join("tmp", "scvi_scaled_adata_rna.h5ad"))
 
 L.info("Done")
 

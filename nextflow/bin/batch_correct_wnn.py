@@ -63,14 +63,11 @@ parser.add_argument('--atac_neighbors_k', type=int, default=30)
 parser.add_argument('--atac_dimred', default=None, help='Preferred embedding key for ATAC (e.g., "X_lsi")')
 
 
-# Batch-corrected choices (replace YAML):
-# Pass mapping like {"rna": "bbknn", "prot": "harmony", "atac": null}
 # This determines which obsm to expect: "X_<METHOD>" (with "X_scVI" capitalization fix)
 parser.add_argument('--batch_corrected_json', default=None, help='JSON dict modality->method or null, e.g. {"rna":"bbknn","prot":"harmony","atac":null}')
 parser.add_argument('--batch_corrected_json_file', default=None)
 
 # Optional map of precomputed per-modality anndata paths (if embeddings are not present in current MuData):
-# e.g. {"rna": "tmp/harmony_scaled_adata_rna.h5ad", "prot": "tmp/bbknn_scaled_adata_prot.h5ad"}
 parser.add_argument('--precomputed_anndata_json', default=None)
 parser.add_argument('--precomputed_anndata_json_file', default=None)
 
@@ -83,8 +80,6 @@ L.info("Running with params: %s", args)
 sc.set_figure_params(facecolor="white")
 sc.settings.autoshow = False
 sc.settings.figdir = args.figdir
-
-#params = pp.io.read_yaml("pipeline.yml")
 
 # Helpers
 def to_bool(x):
@@ -133,16 +128,6 @@ def _ensure_representation(adata, mod, repuse, npcs):
 threads_available = multiprocessing.cpu_count()
 
 
-# if params['multimodal']['WNN']['modalities'] is not None:
-#     modalities= params['multimodal']['WNN']['modalities']
-#     modalities = [x.strip() for x in modalities.split(",")]
-#     L.info(f"Using modalities :{modalities}")
-
-# wnn_params_bc = params['multimodal']['WNN']['batch_corrected'] 
-# if modalities is not None:
-#     wnn_params_bc= {k: wnn_params_bc[k] for k in wnn_params_bc.keys() & modalities}
-# L.info( wnn_params_bc )
-
 L.info("Reading in MuData from '%s'" % args.scaled_anndata)
 mdata = mu.read(args.scaled_anndata)
 
@@ -154,15 +139,6 @@ if not mods:
     raise ValueError(...)
 L.info("Using modalities for WNN: %s", mods)
 
-# if all(x in modalities for x in mdata.mod.keys()):
-#     tmp = mdata.copy()
-#     removed_mods = None
-# else:
-#     tmp = mdata.copy()
-#     removed_mods = list(set(mdata.mod.keys()) - set(modalities))
-#     L.info(f"Removing modalities {removed_mods}")
-#     for rmod in removed_mods:
-#         del tmp.mod[rmod]
 
 # Copy and drop unused modalities
 tmp = mdata.copy()
@@ -185,21 +161,6 @@ L.info("Batch-corrected choices per modality: %s", bc_map)
 precomp_map = _drop_nones(_load_json_arg(args.precomputed_anndata_json, args.precomputed_anndata_json_file)) or {}
 
 
-#one could also check of obsp is not empty and use precomputed connectivities but i assume that if batch corrected the obsp is populated, if not, calc on the flight on pca
-# dict_graph = {}
-# for x in wnn_params_bc.keys():
-#     dict_graph[x] = {}
-#     if wnn_params_bc[x] is not None:
-#         dict_graph[x]["obsm"] = "X_" + wnn_params_bc[x]
-#         dict_graph[x]["anndata"] = "tmp/" + wnn_params_bc[x].lower() + "_scaled_adata_" + x +".h5ad"
-#     else: 
-#         dict_graph[x]["obsm"] = None
-
-# L.info(dict_graph)
-
-# if dict_graph["rna"]["obsm"] == "X_scvi":
-#     dict_graph["rna"]["obsm"] = "X_scVI"
-
 dict_graph = {}
 for mod in mods:
     method = bc_map.get(mod, None)
@@ -213,14 +174,11 @@ for mod in mods:
 
 L.info("dict_graph (per-modality embedding/backup path): %s", dict_graph)
 
-# ... earlier: mdata read, mods selection, tmp = mdata.copy(), intersect_obs(tmp),
-# bc_map -> dict_graph, etc. (unchanged ordering as your original)
 
 threads_available = multiprocessing.cpu_count()
 
 for kmod in dict_graph.keys():
     L.info(kmod)
-    # replace params['multimodal']['WNN']['knn'][kmod] with CLI flags
     if kmod == "rna":
         pkmod = {
             'method': args.rna_neighbors_method,
@@ -320,78 +278,6 @@ for kmod in dict_graph.keys():
 tmp.update()
 
 
-# for kmod in dict_graph.keys():
-#     L.info(kmod)
-#     pkmod=params['multimodal']['WNN']['knn'][kmod]
-    
-#     if dict_graph[kmod]["obsm"] is not None:
-#         if dict_graph[kmod]["obsm"] not in tmp.mod[kmod].obsm.keys():
-#             L.info("Provided mdata doesn't have the desired obsm, just checking if it's bbknn you want.")
-#             if dict_graph[kmod]["obsm"] == "X_bbknn":
-#                 if len(tmp.mod[kmod].obsp.keys()) > 0 and "neighbors" in tmp.mod[kmod].uns.keys() : 
-#                      L.info("Populated obsp slot found. Assuming it's bbknn")
-#                 else:
-#                     if dict_graph[kmod]["anndata"] is not None:
-#                         L.info("Reading precomputed connectivities for bbknn")
-#                         adata = mu.read(dict_graph[kmod]["anndata"])
-#                         tmp.mod[kmod].obsp = adata.obsp.copy()
-#                         tmp.mod[kmod].obsm[dict_graph[kmod]["obsm"]] = adata.obsm[dict_graph[kmod]["obsm"]].copy()
-#                         tmp.mod[kmod].uns["neighbors"]= adata.uns["neighbors"].copy()
-#                         tmp.update()
-#             else:
-#                 if dict_graph[kmod]["anndata"] is not None:
-#                     L.info("Provided mdata doesn't have the desired obsm. reading the batch corrected data from another stored object")
-#                     adata = mu.read(dict_graph[kmod]["anndata"])
-#                     L.debug(kmod + "object")
-#                     L.debug(adata)
-#                     tmp.mod[kmod].obsm[dict_graph[kmod]["obsm"]] = adata.obsm[dict_graph[kmod]["obsm"]].copy()
-#                     tmp.mod[kmod].obsp = adata.obsp.copy()
-#                     tmp.mod[kmod].uns['neighbors'] = adata.uns['neighbors'].copy()
-#                     tmp.update()
-#                     repuse = dict_graph[kmod]["obsm"] 
-#                 else:
-#                     L.warning("Could not find the desired obsm and the anndata slot is empty, will calculate on the flight")
-#                     if kmod =="atac":
-#                         if "X_lsi" in tmp.mod[kmod].obsm.keys():
-#                             repuse = "X_lsi"
-#                         else:
-#                             repuse = "X_pca"
-#                         L.info("Falling back on %s" %(repuse) )
-            
-#                     L.info("Computing neighbours")
-#                     if repuse != "X_bbknn":
-#                         run_neighbors_method_choice(tmp.mod[kmod], 
-#                             method=pkmod['method'], 
-#                             n_neighbors=int(pkmod['k']), 
-#                             n_pcs=min(int(pkmod['npcs']), mdata.var.shape[0]-1), #this should be the # rows of var, not obs
-#                             metric=pkmod['metric'], 
-#                             #does this throw an error if no PCA for any single mod is stored?
-#                             use_rep=repuse,
-#                             nthreads=max([threads_available, 6]))
-#         else:
-#             L.info("Using %s" %(dict_graph[kmod]["obsm"]))
-#     else:
-#         L.warning("Could not find the desired obsm and the anndata slot is empty, will calculate on the flight")
-#         repuse ="X_pca"
-#         if kmod =="atac":
-#             if "X_lsi" in tmp.mod[kmod].obsm.keys():
-#                 repuse = "X_lsi"
-#             else:
-#                 repuse = "X_pca"
-#             L.info("falling back on %s" %(repuse) )
-
-#         L.info("Computing neighbours")
-#         run_neighbors_method_choice(tmp.mod[kmod], 
-#             method=pkmod['method'], 
-#             n_neighbors=int(pkmod['k']), 
-#             n_pcs=min(int(pkmod['npcs']), mdata.var.shape[0]-1), #this should be the # rows of var, not obs
-#             metric=pkmod['metric'], 
-#             #does this throw an error if no PCA for any single mod is stored?
-#             use_rep=repuse,
-#             nthreads=max([threads_available, 6]))
-
-# tmp.update()
-
 low_mem = args.low_memory
 if isinstance(low_mem, str):
     low_mem = True if low_mem.lower() in ("1","true","t","yes","y") else False
@@ -408,7 +294,6 @@ mu.pp.neighbors(tmp,
 
 L.info("Computing UMAP")
 mu.tl.umap(tmp,min_dist=0.4, neighbors_key='wnn')
-#For taking use of mdata.obsp['connectivities'], it’s scanpy.tl.leiden() that should be used. not muon.tl.leiden
 L.info("Computing Leiden clustering")
 sc.tl.leiden(tmp, neighbors_key='wnn', key_added='leiden_wnn') 
 
@@ -416,14 +301,12 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(tmp.obsm['X_umap'], tmp.obs.index)
 umap.to_csv(args.output_csv)
 
-#add back modalities that were not used for this run
 
 if removed_mods is not None:
     for rmd in removed_mods:
         tmp.mod[rmd] = mdata.mod[rmd].copy()
 
 L.info("Saving MuData to 'tmp/wnn_scaled_adata.h5mu'")
-# tmp.write("tmp/wnn_scaled_adata.h5mu")
 out_path = args.output_mudata
 if out_path:
     if os.path.isdir(out_path) or not out_path.endswith('.h5mu'):
