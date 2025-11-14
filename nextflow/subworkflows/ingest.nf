@@ -5,6 +5,7 @@ include { make_adata_from_csv } from '../modules/ingest/make_adata.nf'
 include { concat_adata as concat_adata_main } from '../modules/ingest/concat_adata.nf'
 include { concat_adata as concat_adata_bg } from '../modules/ingest/concat_adata.nf'
 include { downsample_mudata } from '../modules/ingest/downsample.nf'
+include { run_scrublet_scores } from '../modules/ingest/run_scrublet_scores.nf'
 
 workflow ingest {
     main:
@@ -148,16 +149,16 @@ workflow ingest {
     //ingestMap takes all params under ingest in the config
     def ingestMap = params.ingest ?: [:]
 
-    def modalities = (params.modalities ?: ingestMap.modalities) ?: [:]
-    def normMethods = toList(params.normalisation_methods ?: ingestMap.normalisation_methods)*.toLowerCase()
+    def modalities = (params.ingest.modalities) ?: [:]
+    def normMethods = toList(params.ingest.normalisation_methods)*.toLowerCase()
 
-    def assess_background = truthy(params.assess_background ?: ingestMap.assess_background)
+    def assess_background = truthy(params.ingest.assess_background)
     def has_prot         = truthy(modalities.prot)
     def has_dsb          = normMethods.contains('dsb')
 
     //check whether assess background is on and dsb is requested with protein data
     def _bg_on     = assess_background || (has_prot && has_dsb) 
-    def _bg_suffix = ingestMap.background_suffix ?: '_bg'
+    def _bg_suffix = params.ingest.background_suffix ?: '_bg'
 
     // Take the structure of the tuple for filtered data
     def ch_make_adata_tuples_bg = ch_main_tuples.map { t ->
@@ -212,8 +213,8 @@ workflow ingest {
             file(params.submission_file),
             params.ingest.concat_join_type,
             (params.ingest.metadatacols ?: null),
-            null,  // barcode_mtd_df OFF in BG
-            null,  // barcode_mtd_cols OFF in BG
+            null,
+            null,
             (params.ingest.protein_metadata_table ?: null),
             (params.ingest.index_col_choice ?: null)
         )
@@ -243,5 +244,18 @@ workflow ingest {
     filtered_concat_adata = concat_adata_main( ch_concat_main )
 
 // Run scrublet scores
+
+    def ch_scrublet_in = main_built.h5mu 
+        .collect()
+        .map { Path h5 ->
+        def sid = h5.getBaseName().replaceFirst(/\\.h5mu$/, '')
+        tuple(sid, h5)
+        }
+    // Check wheter src_run is true and rna modality is present
+    def scr_run    = params.ingest.scr.run in [true, 'true', 'True', 1, '1']
+    def rna_on     = params.ingest.modalities.rna in [true, 'true', 'True', 1, '1']
+    if( scr_run && rna_on ) {
+        run_scrublet_scores( ch_scrublet_in )
+    }
 
 }

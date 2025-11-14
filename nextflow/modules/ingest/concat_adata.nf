@@ -22,6 +22,7 @@ process concat_adata {
 
     output:
     path("${output_basename}.h5mu"), emit: h5mu
+    path "logs/1_concat_adata.log", emit: log
 
 
     script:
@@ -47,6 +48,6 @@ process concat_adata {
         --submissionfile "${submission_file}" \
         --join_type "${join_type}" \
         ${opts} \
-        >> logs/concat_adata.log 2>&1
+        >> logs/1_concat_adata.log 2>&1
     """
 }
