@@ -76,7 +76,7 @@ sfile=args.submissionfile
 # sfile= "CARTC_bonemarrow_samples.tsv"
 
 L.info("Reading in submission file from '%s'" % sfile)
-caf = pd.read_csv(sfile, sep="\t")
+caf = pd.read_csv(sfile)
 # the modality argument is relevent only if use_muon is True.
 # mdatas = [read_anndata(i, use_muon, modality="all") for i in lf]
 mdatas = [mu.read(i) for i in lf]
