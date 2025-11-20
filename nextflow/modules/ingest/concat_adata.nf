@@ -5,7 +5,6 @@ process concat_adata {
     tag "${sample_id}"
 
     publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*.h5mu'
 
     label 'limit_blas'
 

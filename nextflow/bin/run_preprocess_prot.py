@@ -33,7 +33,7 @@ parser.add_argument("--channel_col",
                     default=None,
                     help="")
 parser.add_argument("--normalisation_methods", default="clr,dsb",
-                   help="comma separated list of normalisation methods")
+                    help="comma separated list of normalisation methods")
 parser.add_argument("--clr_margin",
                     default=0,
                     help="run clr with margin calculated on cells (columns) or on features (rows)")    
@@ -213,7 +213,7 @@ if args.channel_col is not None:
 else:
     # run on all the data (not on a channel basis)
     # first run clr
-     # do the ridgeplots for clr
+    # do the ridgeplots for clr
     plot_features = list(all_mdata["prot"].var_names)
     plot_features.sort()
     plot_features = [x for x in plot_features if x not in isotypes]

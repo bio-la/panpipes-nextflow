@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 scanpy QC script RNA
 order of QC:
@@ -139,9 +140,9 @@ if tcr is not None:
 
 
 mdata.update()
-L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_cell_metadata.tsv")
+L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_rep_cell_metadata.tsv")
 write_obs(mdata, output_prefix=args.sampleprefix, 
-    output_suffix="_cell_metadata.tsv")
+    output_suffix="_rep_cell_metadata.tsv")
 L.info("Saving updated MuData to '%s'" % args.output_mudata)
 mdata.write(args.output_mudata)
 

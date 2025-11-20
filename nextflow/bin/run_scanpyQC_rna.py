@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 scanpy QC script RNA
 order of QC:
@@ -166,9 +167,9 @@ if args.ccgenes is not None:
 
 mdata.update()
 
-L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_cell_metadata.tsv")
+L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_rna_cell_metadata.tsv")
 write_obs(mdata, output_prefix=args.sampleprefix, 
-        output_suffix="_cell_metadata.tsv")
+        output_suffix="_rna_cell_metadata.tsv")
 L.info("Saving updated MuData to '%s'" % args.outfile)
 mdata.write(args.outfile)
 

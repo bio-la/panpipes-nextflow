@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 scanpy QC script ATAC
 '''

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 scanpy QC script PROT
 order of QC:
@@ -72,6 +73,7 @@ parser.add_argument("--per_prot_metrics",
 args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
+L.info("channel_col is set to '%s'" % args.channel_col)
 sc.settings.verbosity = 3
 figdir = args.figdir
 
@@ -139,9 +141,9 @@ if (len(isotypes) > 0) & check_for_bool(args.identify_isotype_outliers):
 mdata.update()
 
 # write out the cell_metadata
-L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_cell_metadata.tsv")
+L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_prot_cell_metadata.tsv")
 write_obs(mdata, output_prefix=args.sampleprefix, 
-        output_suffix="_cell_metadata.tsv")
+        output_suffix="_prot_cell_metadata.tsv")
 # write out whole object data.
 L.info("Saving updated MuData to '%s'" % args.outfile)
 mdata.write(args.outfile)

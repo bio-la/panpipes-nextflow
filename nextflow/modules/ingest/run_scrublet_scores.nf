@@ -18,8 +18,13 @@ process run_scrublet_scores {
     path "scrublet/${sample_id}_doubletScore_histogram.png", emit: histogram
     path "logs/2_run_scrublet_scores_${sample_id}.log", emit: log
 
+    when:
+        (params.ingest?.scr.run              in [true, 'true', 'True', 1, '1']) &&
+        (params.ingest?.modalities?.rna      in [true, 'true', 'True', 1, '1'])
+
     script:
     //ingest params
+    
     def ingestMap = params.ingest ?: [:]
 
     // optional flags

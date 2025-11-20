@@ -6,6 +6,9 @@ include { concat_adata as concat_adata_main } from '../modules/ingest/concat_ada
 include { concat_adata as concat_adata_bg } from '../modules/ingest/concat_adata.nf'
 include { downsample_mudata } from '../modules/ingest/downsample.nf'
 include { run_scrublet_scores } from '../modules/ingest/run_scrublet_scores.nf'
+include { run_scanpy_qc_rna } from '../modules/ingest/run_scanpyQC_rna.nf'
+include { run_scanpy_qc_prot } from '../modules/ingest/run_scanpyQC_prot.nf'
+include { run_preprocess_prot } from '../modules/ingest/run_preprocess_prot.nf'
 
 workflow ingest {
     main:
@@ -243,19 +246,56 @@ workflow ingest {
     }
     filtered_concat_adata = concat_adata_main( ch_concat_main )
 
-// Run scrublet scores
+    // Run scrublet scores
 
     def ch_scrublet_in = main_built.h5mu 
-        .collect()
         .map { Path h5 ->
         def sid = h5.getBaseName().replaceFirst(/\\.h5mu$/, '')
         tuple(sid, h5)
         }
-    // Check wheter src_run is true and rna modality is present
-    def scr_run    = params.ingest.scr.run in [true, 'true', 'True', 1, '1']
-    def rna_on     = params.ingest.modalities.rna in [true, 'true', 'True', 1, '1']
-    if( scr_run && rna_on ) {
-        run_scrublet_scores( ch_scrublet_in )
+
+    def scrublet_out = run_scrublet_scores( ch_scrublet_in )
+    def ch_scrublet_scores_out = scrublet_out.scores
+
+    // Run scanpy QC for RNA
+    def ch_unfilt_h5mu = filtered_concat_adata.h5mu
+    def ch_scrublet_scores = ch_scrublet_scores_out
+
+    def ch_rna_qc_in = ch_unfilt_h5mu
+        .combine(ch_scrublet_scores)
+        .map { Path h5, Path scr ->
+            tuple(params.sample_prefix, h5, scr)
+        }
+
+    rna_qc = run_scanpy_qc_rna( ch_rna_qc_in )
+
+    // Run scanpy QC prot
+    def ch_prot_qc_in = rna_qc.h5mu_qc.map { Path h5 ->
+        tuple(params.sample_prefix, h5)
     }
+
+    prot_qc = run_scanpy_qc_prot( ch_prot_qc_in )
+
+    //Run preprocess prot
+    def ch_prot_qc_h5mu = prot_qc.h5mu
+    def ch_bg_mudata = bg_concat_adata.h5mu
+    
+    def ch_prot_in = ch_prot_qc_h5mu.map { h5 ->
+        tuple(params.sample_prefix, h5, null)
+    }
+    if( _bg_on ) {
+    // si hay BG, inyectamos el bg en la tercera posición
+    ch_prot_in = ch_prot_in
+        .combine(bg_h5mu_ch)
+        .map { triple, bg ->
+            def (sid, h5, _) = triple
+            tuple(sid, h5, bg)
+        }
+    }
+
+    run_preprocess_prot( ch_prot_in )
+
+    // Run scanpy QC repertoire
+
 
 }
