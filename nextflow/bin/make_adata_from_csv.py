@@ -116,13 +116,47 @@ if 'rna' in mdata.mod.keys():
     mdata['rna'].obs = mdata['rna'].obs.drop(columns="total_counts")
     mdata.update()
 
+# if 'prot' in mdata.mod.keys():
+#     L.info("Modality: prot")
+#     if 'rna' in mdata.mod.keys():
+#         if check_for_bool(args.subset_prot_barcodes_to_rna):
+#             # FIX ----- delete airr from obsm in modalities other than rep
+#             for mod in mdata.mod.keys():
+#                 if mod == 'rep':
+#                     L.info("Mode rep")
+#                     continue
+#                 if 'airr' in mdata.mod[mod].obsm:
+#                     L.info("Delete airr from other modalities")
+#                     del mdata.mod[mod].obsm['airr']
+            
+#             L.info("Intersecting observations of modalities RNA and prot")
+#             intersect_obs_by_mod(mdata, ['rna', 'prot'])
+#             mdata.update()
+
+
 if 'prot' in mdata.mod.keys():
     L.info("Modality: prot")
     if 'rna' in mdata.mod.keys():
         if check_for_bool(args.subset_prot_barcodes_to_rna):
             L.info("Intersecting observations of modalities RNA and prot")
-            intersect_obs_by_mod(mdata, ['rna', 'prot'])
-            mdata.update()
+
+            #Temporarily remove rep so that when intersect_obs_by_mod is used
+            # rep is not affected (and obsm['airr'] is not attempted to be filtered).
+            rep_mod = None
+            if 'rep' in mdata.mod.keys():
+                rep_mod = mdata.mod['rep']
+                # remove it from mdata.mod
+                del mdata.mod['rep']
+
+            #   intersection only over sobre rna/prot
+            try:
+                intersect_obs_by_mod(mdata, ['rna', 'prot'])
+                mdata.update()
+            finally:
+                # add rep as it was before
+                if rep_mod is not None:
+                    mdata.mod['rep'] = rep_mod
+                    mdata.update()
 
 if 'atac' in mdata.mod.keys():
     L.info("Modality: ATAC")

@@ -18,9 +18,9 @@ process downsample_mudata {
             val(intersect_mods)
 
     output:
-      path("${output_basename}.h5mu"), emit: h5mu
+      path("${sample_id}_${output_basename}.h5mu"), emit: h5mu
       path "logs/downsample.log", emit: log
-      path "${output_basename}_downsampled_cell_metadata.tsv", emit: cell_metadata
+      path "${sample_id}_${output_basename}_downsampled_cell_metadata.tsv", emit: cell_metadata
 
     script:
     def has = { x -> x != null && x.toString().trim() && x.toString() != 'null' && x.toString() != 'None' }
@@ -37,9 +37,9 @@ process downsample_mudata {
     """
     mkdir -p logs
 
-    python3 \${workflow.projectDir}/bin/downsample.py \
+    python3 ${workflow.projectDir}/bin/downsample.py \
       --input_mudata "${input_h5mu}" \
-      --output_mudata "${output_basename}.h5mu" \
+      --output_mudata "${sample_id}_${output_basename}.h5mu" \
       ${optionals} \
       >> logs/downsample.log 2>&1
     """

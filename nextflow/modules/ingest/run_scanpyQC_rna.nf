@@ -60,7 +60,7 @@ process run_scanpy_qc_rna {
         --input_anndata "${unfilt_h5mu}" \\
         --outfile "${unfilt_h5mu}" \\
         --figdir "figures" \\
-        ${opts_str} \\
+        ${opts_str}\\
         > "logs/3_run_scanpy_qc_rna.log" 2>&1
 
     """

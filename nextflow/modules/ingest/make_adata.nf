@@ -23,7 +23,8 @@ process make_adata_from_csv {
 
     output:
     path "${output_basename}.h5mu", emit: h5mu
-    path "logs/make_adata_from_csv.log", emit: log
+    tuple val(sample_id), path ("${output_basename}.h5mu"), emit: h5mu_with_id
+    path "logs/make_adata_from_csv_${sample_id}.log", emit: log
 
 
     script:
@@ -59,7 +60,7 @@ process make_adata_from_csv {
         ${atacArgs} \\
         ${tcrArgs} \\
         ${bcrArgs} \\
-        >> logs/make_adata_from_csv.log 2>&1
+        >> logs/make_adata_from_csv_${sample_id}.log 2>&1
 
     """
 }

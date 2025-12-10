@@ -157,7 +157,8 @@ def parse_10x_cellranger_multi(path_df,path_col='metrics_summary_path'):
     ranger = {"library_or_sample":"category"}
     msums.rename(columns =ranger,inplace=True)
     # convert percentages from string to numeric
-    msums['metric_value'] = [re.sub(",|%", "", x) for x in msums['metric_value']]
+    #msums['metric_value'] = [re.sub(",|%", "", x) for x in msums['metric_value']]
+    msums['metric_value'] = [re.sub(",|%", "", str(x)) for x in msums['metric_value']]
     msums['metric_value'] = msums['metric_value'].astype(float)
     # sort outputs
     msums = msums.sort_values(['metric_name', 'sample_id'])
@@ -231,6 +232,7 @@ tenx_metrics_full.to_csv(args.output_file, index=False)
 # tenx_metrics['metric_value'] = tenx_metrics['metric_value'].astype(float)
 # split by library_type and metric_name 
 L.info("Plotting metrics for each library_type and metric_name")
+tenx_metrics_full = tenx_metrics_full.dropna(subset=['library_type', 'metric_name'])
 for idx, row in tenx_metrics_full[['library_type','metric_name']].drop_duplicates().iterrows():
     mn = row['metric_name']
     lt = row['library_type']

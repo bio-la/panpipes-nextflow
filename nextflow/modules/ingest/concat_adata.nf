@@ -20,7 +20,7 @@ process concat_adata {
         val(protein_new_index_col)
 
     output:
-    path("${output_basename}.h5mu"), emit: h5mu
+    path ("${output_basename}.h5mu"), emit: h5mu
     path "logs/1_concat_adata.log", emit: log
 
 
