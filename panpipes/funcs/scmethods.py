@@ -368,7 +368,7 @@ def _calc_top_n_genes(adata, n_top=50):
     if issparse(norm_dict['X']):
             mean_percent = norm_dict['X'].mean(axis=0).A1
             top_idx = np.argsort(mean_percent)[::-1][:n_top]
-            counts_top_genes = norm_dict['X'][:, top_idx].A
+            counts_top_genes = norm_dict['X'][:, top_idx].toarray()
     else:
         mean_percent = norm_dict['X'].mean(axis=0)
         top_idx = np.argsort(mean_percent)[::-1][:n_top]
@@ -412,7 +412,7 @@ def get_mean_background_fraction(adata, top_background, group_by=None):
     gene_idx = [idx for idx, gene in  enumerate(adata.var_names ) if gene in top_background]
     if issparse(norm_dict['X']):
         mean_percent = norm_dict['X'].mean(axis=0).A1
-        counts_top_genes = norm_dict['X'][:, gene_idx].A
+        counts_top_genes = norm_dict['X'][:, gene_idx].toarray()
     else:
         mean_percent = norm_dict['X'].mean(axis=0)
         counts_top_genes = norm_dict['X'][:, gene_idx]
