@@ -52,6 +52,8 @@ parser.add_argument('--neighbors_k',
                     help="neighbors k")
 parser.add_argument('--neighbors_metric',
                     help="neighbor metric, e.g. euclidean or cosine")
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 args, opt = parser.parse_known_args()
@@ -60,7 +62,6 @@ L.info("Running with params: %s", args)
 
 # this should be an object that contains the full log normalised data (adata_log1p.h5ad)
 # prior to hvgs and filtering
-#adata = read_anndata(args.input_anndata, use_muon=use_muon, modality=args.modality)
 L.info("Reading in MuData from '%s'" % args.input_anndata)
 mdata = mu.read(args.input_anndata)
 adata = mdata.mod[args.modality] 
@@ -100,8 +101,8 @@ if len(columns)>1:
     # run harmony
     L.info("Running Harmony")
     ho = hm.run_harmony(adata.obsm[dimred][:,0:int(args.harmony_npcs)], adata.obs, ["comb_columns"], 
-                                       sigma = float(args.sigma_val),theta = float(args.theta_val),verbose=True,max_iter_kmeans=30, 
-                                       max_iter_harmony=40)
+                                    sigma = float(args.sigma_val),theta = float(args.theta_val),verbose=True,max_iter_kmeans=30, 
+                                    max_iter_harmony=40)
 
 else:
     # make sure that batch is a categorical
@@ -145,11 +146,26 @@ L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap = pd.DataFrame(adata.obsm['X_umap'], adata.obs.index)
 umap.to_csv(args.output_csv)
 
+#outfiletmp = ("tmp/harmony_scaled_adata_" + args.modality + ".h5ad" )
+#L.info("Saving AnnData to '%s'" % outfiletmp)
+#write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
 
-#adata.write("tmp/harmony_scaled_adata_" + args.modality + ".h5ad")
+if args.output_anndata is not None:
+    outfiletmp = args.output_anndata
+    # If the user accidentally gave a directory instead of a file, append default name
+    if os.path.isdir(outfiletmp) or not outfiletmp.endswith(".h5ad"):
+        outfiletmp = os.path.join(outfiletmp, f"harmony_scaled_adata_{args.modality}.h5ad")
+    outdir = os.path.dirname(outfiletmp)
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+else:
 
+    base = os.path.splitext(os.path.basename(args.output_csv))[0]
+    outdir = os.path.dirname(args.output_csv)
+    outfiletmp = os.path.join(outdir, f"harmony_scaled_adata_{args.modality}.h5ad")
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
 
-outfiletmp = ("tmp/harmony_scaled_adata_" + args.modality + ".h5ad" )
 L.info("Saving AnnData to '%s'" % outfiletmp)
 write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
 
