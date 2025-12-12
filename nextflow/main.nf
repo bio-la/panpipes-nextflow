@@ -1,6 +1,12 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl=2
 
+
+include { clustering_sc } from './subworkflows/clustering.nf'
+
+
+
+
 include { qc_spatial } from './subworkflows/qc_spatial.nf'
 include { spatial_preprocess } from './subworkflows/spatial_preprocessing.nf'
 include { spatial_clustering } from './subworkflows/spatial_clustering.nf'
@@ -10,6 +16,23 @@ include { spatial_deconvolution } from './subworkflows/spatial_deconvolution.nf'
 include { visualisation } from './subworkflows/visualisation.nf'
 include { integration } from './subworkflows/integration.nf'
 
+
+
+/**** Single-Cell Workflows ****/
+
+
+workflow clustering{
+
+    clustering_sc()
+    
+}
+
+
+
+
+
+
+/**** Spatial Transcriptomics Workflows ****/
 
 workflow run_qc_spatial {
 
