@@ -4,11 +4,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import muon as mu
-import os
+import json, os, yaml
 import re
 from matplotlib.pyplot import get_cmap
 from matplotlib.colors import ListedColormap
-import yaml 
 from panpipes.funcs.io import read_yaml
 from panpipes.funcs.plotting import batch_scatter_two_var
 from pandas.api.types import is_string_dtype
@@ -53,10 +52,22 @@ batch_dict = read_yaml(args.batch_dict)
 
 # parse the qc dict
 qc_dict = args.qc_dict
-if isinstance(args.qc_dict, dict):
-    qc_dict = args.qc_dict
+# if isinstance(args.qc_dict, dict):
+#     qc_dict = args.qc_dict
+# else:
+#     qc_dict = read_yaml(args.qc_dict) 
+if isinstance(qc_dict, dict):
+    pass
 else:
-    qc_dict = read_yaml(args.qc_dict) 
+    if isinstance(qc_dict, str) and os.path.exists(qc_dict):
+        qc_dict = read_yaml(qc_dict)                     # it's a file path
+    else:
+        try:
+            qc_dict = json.loads(qc_dict)                # try inline JSON
+        except Exception:
+            qc_dict = yaml.safe_load(qc_dict)            # fallback: inline YAML
+
+
 
 # extract the grouping vars which are expected to be categorical
 grpvar = [x.replace (" " ,"") for x in qc_dict['grouping_var'].split(",")]
@@ -94,8 +105,11 @@ for mod in umaps_df['mod'].unique():
     # put none at the top of the list
     if mod != "multimodal":
         umaps_methods_list = plt_df['method'].cat.categories.tolist()
-        umaps_methods_list.insert(0, umaps_methods_list.pop(umaps_methods_list.index("none")))
-        plt_df['method'] = plt_df['method'].cat.reorder_categories(umaps_methods_list, ordered=True)
+        if "none" in umaps_methods_list:
+            umaps_methods_list.insert(0, umaps_methods_list.pop(umaps_methods_list.index("none")))
+            plt_df['method'] = plt_df['method'].cat.reorder_categories(umaps_methods_list, ordered=True)
+        #umaps_methods_list.insert(0, umaps_methods_list.pop(umaps_methods_list.index("none")))
+        #plt_df['method'] = plt_df['method'].cat.reorder_categories(umaps_methods_list, ordered=True)
     #  get grouing vars
     if mod !="multimodal":
         if mod in batch_dict.keys() :

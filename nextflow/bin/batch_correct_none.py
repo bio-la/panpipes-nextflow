@@ -35,7 +35,7 @@ parser.add_argument('--dimred',
                     help='which dimred to expect, relevant for ATAC')
 parser.add_argument('--output_csv', default='batch_correction/umap_bc_none.csv',
                     help='')
-parser.add_argument('--n_threads', default=1,
+parser.add_argument('--n_threads', default=1, type=int,
                     help="num threads to use for neighbor computations")
 parser.add_argument('--integration_col', default='batch')
 parser.add_argument('--neighbors_n_pcs',
@@ -46,19 +46,24 @@ parser.add_argument('--neighbors_k',
                     help="neighbors k")
 parser.add_argument('--neighbors_metric',
                     help="neighbor metric, e.g. euclidean or cosine")
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
+
 
 args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
 
 
-
-
-
-
 adata_path = args.input_anndata +"/" + args.modality
 if os.path.exists(args.input_anndata):
     L.info("Reading in data from '%s'" % adata_path)
-    adata = mu.read(args.input_anndata +"/" + args.modality)
+    mdata = mu.read(args.input_anndata)
+    mods = list(mdata.mod.keys())
+    if args.modality not in mdata.mod:
+        L.error("Requested modality '%s' not found. Available modalities: %s",
+                args.modality, ", ".join(mods))
+        sys.exit(1)
+    adata = mdata.mod[args.modality]
 else:
     L.info("missing input anndata")
 
@@ -85,7 +90,6 @@ if int(args.neighbors_n_pcs) > 0:
     pc_kwargs['use_rep'] = dimred
     pc_kwargs['n_pcs'] = int(args.neighbors_n_pcs)
 else:
-    # need to push scanpy to use .X if use_rep is None.
     pc_kwargs['use_rep'] = None
     pc_kwargs['n_pcs'] = int(args.neighbors_n_pcs)
 
@@ -106,6 +110,15 @@ if dimred not in adata.obsm:
     pc_kwargs['use_rep'] = "X_pca"
     pc_kwargs['n_pcs'] = n_pcs
 
+# avoid asking for more pcs than available
+if pc_kwargs['use_rep'] is not None:
+    avail = adata.obsm[pc_kwargs['use_rep']].shape[1]
+    if pc_kwargs['n_pcs'] > avail:
+        L.warning(
+            "neighbors_n_pcs (%d) > available components in %s (%d); clipping.",
+            pc_kwargs['n_pcs'], pc_kwargs['use_rep'], avail
+        )
+        pc_kwargs['n_pcs'] = avail
 
 L.info("Computing neighbors")
 run_neighbors_method_choice(adata, 
@@ -116,18 +129,27 @@ run_neighbors_method_choice(adata,
 
 
 L.info("Computing UMAP")
-sc.tl.umap(adata)
+# For reproducibility
+sc.tl.umap(adata, random_state=0)
 
 #write out
 L.info("Saving UMAP coordinates to csv file '%s'" % args.output_csv)
 umap = pd.DataFrame(adata.obsm['X_umap'], adata.obs.index)
 umap.to_csv(args.output_csv)
 
+if args.output_anndata is not None:
+    outfile = args.output_anndata
+    if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
+        outfile = os.path.join(outfile, f"no_correction_scaled_adata_{args.modality}.h5ad")
+else:
+    base = os.path.splitext(os.path.basename(args.output_csv))[0]
+    outdir = os.path.dirname(args.output_csv)
+    outfile = os.path.join(outdir, f"no_correction_scaled_adata_{args.modality}.h5ad")
 
-outfiletmp = ("tmp/no_correction_scaled_adata_" + args.modality + ".h5ad" )
+#outfiletmp = ("tmp/no_correction_scaled_adata_" + args.modality + ".h5ad" )
 
-L.info("Saving AnnData to '%s" % outfiletmp)
-write_anndata(adata, outfiletmp, use_muon=False, modality=args.modality)
+L.info("Saving AnnData to '%s'", outfile)
+write_anndata(adata, outfile, use_muon=False, modality=args.modality)
 
 L.info("Done")
 
