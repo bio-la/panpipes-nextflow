@@ -12,6 +12,7 @@ include { run_scrublet_scores } from '../modules/ingest/run_scrublet_scores.nf'
 include { run_scanpy_qc_rna } from '../modules/ingest/run_scanpyQC_rna.nf'
 include { run_scanpy_qc_prot } from '../modules/ingest/run_scanpyQC_prot.nf'
 include { run_preprocess_prot } from '../modules/ingest/run_preprocess_prot.nf'
+include { run_scanpy_qc_rep } from '../modules/ingest/run_scanpyQC_rep.nf'
 
 workflow ingest {
     main:
@@ -178,6 +179,11 @@ workflow ingest {
     def _bg_on     = assess_background || (has_prot && has_dsb) 
     def _bg_suffix = params.ingest.background_suffix ?: '_bg'
 
+    // BCR/TCR present
+    def has_bcr = truthy(modalities.bcr)
+    def has_tcr = truthy(modalities.tcr)
+    def has_rep = has_bcr || has_tcr
+
 
     // aggregate metrics
 
@@ -281,7 +287,7 @@ workflow ingest {
                 base,                   // sample_id (used as tag in downsample_mudata)
                 h5,                     // input h5mu
                 "${base}${_bg_suffix}", // output basename (e.g. human_pbmc_bg)
-                (params.downsample_target_n_cells ?: 20000) as Integer,
+                (params.ingest.downsample_target_n_cells ?: 20000) as Integer,
                 null,
                 null
             )
@@ -374,26 +380,30 @@ workflow ingest {
 
     prot_qc = run_scanpy_qc_prot( ch_prot_qc_in )
 
+// Run scanpy QC repertoire
+    def ch_rep_qc_in = has_rep \
+        ? prot_qc.h5mu.map { Path h5 ->
+            def sid = h5.getBaseName().replaceFirst(/\.h5mu$/, '')
+            tuple(sid, h5)
+        }
+        : Channel.empty()
+
+    rep_qc = run_scanpy_qc_rep( ch_rep_qc_in )
+
     //Run preprocess prot
     def ch_prot_qc_h5mu = prot_qc.h5mu
     def ch_bg_mudata = bg_concat_adata.h5mu
-    
-    def ch_prot_in = ch_prot_qc_h5mu.map { h5 ->
-        tuple(params.sample_prefix, h5, null)
-    }
-    if( _bg_on ) {
-    // si hay BG, inyectamos el bg en la tercera posición
-    ch_prot_in = ch_prot_in
-        .combine(bg_h5mu_ch)
-        .map { triple, bg ->
-            def (sid, h5, _) = triple
-            tuple(sid, h5, bg)
+
+    def ch_bg_mudata_eff = _bg_on ? ch_bg_mudata : Channel.of(null)
+
+    def ch_prot_in = ch_prot_qc_h5mu
+        .combine(ch_bg_mudata_eff)
+        .map { pair ->
+            def (filtered_h5, bg_h5) = pair
+            tuple(params.sample_prefix, filtered_h5, bg_h5)
         }
-    }
 
     run_preprocess_prot( ch_prot_in )
-
-    // Run scanpy QC repertoire
 
 
 }

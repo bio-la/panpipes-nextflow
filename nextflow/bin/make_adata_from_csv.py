@@ -148,7 +148,7 @@ if 'prot' in mdata.mod.keys():
                 # remove it from mdata.mod
                 del mdata.mod['rep']
 
-            #   intersection only over sobre rna/prot
+            #   intersection only over rna/prot
             try:
                 intersect_obs_by_mod(mdata, ['rna', 'prot'])
                 mdata.update()

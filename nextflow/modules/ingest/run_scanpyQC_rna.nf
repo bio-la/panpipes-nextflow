@@ -5,7 +5,7 @@ process run_scanpy_qc_rna {
     tag "${sample_id}"
 
     publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/rna/*'
+    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/rna/*',  saveAs: { file -> file }
     publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*_rna_cell_metadata.tsv'
 
     label 'limit_blas'
@@ -14,9 +14,9 @@ process run_scanpy_qc_rna {
         tuple val(sample_id), path(unfilt_h5mu),path(scrublet_scores)
 
     output:
-        path("${sample_id}_unfilt.h5mu"),          emit: h5mu_qc
-        path("*_rna_cell_metadata.tsv"),          emit: cell_metadata
-        path("figures"),                           emit: figures
+        path ("${sample_id}_unfilt.h5mu"),          emit: h5mu_qc
+        path ("*_rna_cell_metadata.tsv"),          emit: cell_metadata
+        path ("figures/rna/*"),                           emit: figures, optional: true
         path "logs/3_run_scanpy_qc_rna.log", emit: log
 
 
@@ -53,13 +53,13 @@ process run_scanpy_qc_rna {
     def opts_str = opts.join(' ')
 
     """
-    mkdir -p figures logs
+    mkdir -p figures/rna logs
 
     python3 ${workflow.projectDir}/bin/run_scanpyQC_rna.py \\
         --sampleprefix "${sample_id}" \\
         --input_anndata "${unfilt_h5mu}" \\
         --outfile "${unfilt_h5mu}" \\
-        --figdir "figures" \\
+        --figdir figures/rna \\
         ${opts_str}\\
         > "logs/3_run_scanpy_qc_rna.log" 2>&1
 

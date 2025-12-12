@@ -17,7 +17,7 @@ process aggregate_metrics {
 
     output:
     path "10x_metrics.csv", emit: tenx_metrics
-    path "figures/tenx_metrics/", emit: tenx_figures
+    path "figures/tenx_metrics/*", emit: tenx_figures
 
     script:
         """
