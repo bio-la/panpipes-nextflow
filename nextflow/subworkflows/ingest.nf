@@ -13,6 +13,9 @@ include { run_scanpy_qc_rna } from '../modules/ingest/run_scanpyQC_rna.nf'
 include { run_scanpy_qc_prot } from '../modules/ingest/run_scanpyQC_prot.nf'
 include { run_preprocess_prot } from '../modules/ingest/run_preprocess_prot.nf'
 include { run_scanpy_qc_rep } from '../modules/ingest/run_scanpyQC_rep.nf'
+include { run_scanpy_qc_atac } from '../modules/ingest/run_scanpyQC_atac.nf'
+include { plot_qc } from '../modules/ingest/plot_qc.nf'
+include { assess_background } from '../modules/ingest/assess_background.nf'
 
 workflow ingest {
     main:
@@ -171,12 +174,12 @@ workflow ingest {
 
     def modalities = (params.ingest.modalities) ?: [:]
     def normMethods = toList(params.ingest.normalisation_methods)*.toLowerCase()
-    def assess_background = truthy(params.ingest.assess_background)
+    def assess_bg_flag = truthy(params.ingest.assess_background)
     def has_prot         = truthy(modalities.prot)
     def has_dsb          = normMethods.contains('dsb')
 
     //check whether assess background is on and dsb is requested with protein data
-    def _bg_on     = assess_background || (has_prot && has_dsb) 
+    def _bg_on     = assess_bg_flag || (has_prot && has_dsb)
     def _bg_suffix = params.ingest.background_suffix ?: '_bg'
 
     // BCR/TCR present
@@ -353,14 +356,14 @@ workflow ingest {
     def scrublet_out = run_scrublet_scores( ch_scrublet_in )
     def ch_scrublet_scores_out = scrublet_out.scores
 
-    // scrublet output dir
+    // ------ scrublet output dir -----
     def scrublet_dir_path = file("${params.outdir}/${params.mode}/ingest/scrublet")
 
     def ch_scrublet_dir = ch_scrublet_scores_out
     .collect()
     .map { in_dir -> scrublet_dir_path }
 
-    // Run scanpy QC for RNA
+    // -------- Run scanpy QC for RNA -------------
     def ch_unfilt_h5mu = filtered_concat_adata.h5mu
     //def ch_scrublet_scores = ch_scrublet_scores_out
 
@@ -372,25 +375,22 @@ workflow ingest {
         }
 
     rna_qc = run_scanpy_qc_rna( ch_rna_qc_in )
+    ch_meta = rna_qc.cell_metadata
+    ch_h5mu = rna_qc.h5mu_qc
 
-    // Run scanpy QC prot
+    // ------- Run scanpy QC prot -------
     def ch_prot_qc_in = rna_qc.h5mu_qc.map { Path h5 ->
         tuple(params.sample_prefix, h5)
     }
+    if( truthy(modalities.prot) ) {
+        prot_qc = run_scanpy_qc_prot( ch_prot_qc_in )
+        ch_h5mu = prot_qc.h5mu
+        ch_meta = prot_qc.cell_metadata
+        ch_h5mu = prot_qc.h5mu
+    }
 
-    prot_qc = run_scanpy_qc_prot( ch_prot_qc_in )
 
-// Run scanpy QC repertoire
-    def ch_rep_qc_in = has_rep \
-        ? prot_qc.h5mu.map { Path h5 ->
-            def sid = h5.getBaseName().replaceFirst(/\.h5mu$/, '')
-            tuple(sid, h5)
-        }
-        : Channel.empty()
-
-    rep_qc = run_scanpy_qc_rep( ch_rep_qc_in )
-
-    //Run preprocess prot
+    // ----- Run preprocess prot -------
     def ch_prot_qc_h5mu = prot_qc.h5mu
     def ch_bg_mudata = bg_concat_adata.h5mu
 
@@ -404,6 +404,67 @@ workflow ingest {
         }
 
     run_preprocess_prot( ch_prot_in )
+
+
+    // ------- Run scanpy QC repertoire ------
+    def ch_rep_qc_in = has_rep \
+        ? prot_qc.h5mu.map { Path h5 ->
+            def sid = h5.getBaseName().replaceFirst(/\.h5mu$/, '')
+            tuple(sid, h5)
+        }
+        : Channel.empty()
+
+    //rep_qc = run_scanpy_qc_rep( ch_rep_qc_in )
+    def ch_output_rep = prot_qc.h5mu
+    if( has_rep ) {
+        rep_qc = run_scanpy_qc_rep( ch_rep_qc_in )
+        ch_output_rep = rep_qc.h5mu_qc_rep
+        ch_meta = rep_qc.cell_metadata
+        ch_h5mu = rep_qc.h5mu_qc_rep
+    }
+
+    
+    // ------- Run Scanpy QC ATAC -------
+    def ch_atac_input = ch_output_rep.map { Path h5 ->
+        tuple(params.sample_prefix, h5)
+    }
+
+    def ch_after_atac = ch_output_rep
+    if( truthy(modalities.atac) ) {
+        atac_qc = run_scanpy_qc_atac( ch_atac_input )
+        ch_after_atac = atac_qc.h5mu
+        ch_meta = atac_qc.cell_metadata
+        ch_h5mu = atac_qc.h5mu
+    }   
+
+    // ------- Plot QC ----------
+    def ch_plot_qc_in = ch_meta.map { Path tsv ->
+        tuple(params.sample_prefix, tsv)
+    }
+
+    plot_qc(ch_plot_qc_in)
+
+    // ------- Assess Background -------- 
+    def do_assess_bg = params.ingest?.assess_background == true
+
+    if( do_assess_bg ) {
+
+        def ch_fg_keyed = ch_h5mu.map { Path fg ->
+            tuple(params.sample_prefix, fg)
+        }
+
+        def ch_bg_keyed = bg_concat_adata.h5mu.map { Path bg ->
+            tuple(params.sample_prefix, bg)
+        }
+
+        def ch_assess_bg_in = ch_fg_keyed
+            .join(ch_bg_keyed)
+            .map { sid, fg_h5, bg_h5 ->
+                tuple(sid, fg_h5, bg_h5)
+            }
+
+        assess_background(ch_assess_bg_in)
+    }
 
 
 }

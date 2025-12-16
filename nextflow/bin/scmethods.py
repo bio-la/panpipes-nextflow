@@ -368,7 +368,12 @@ def _calc_top_n_genes(adata, n_top=50):
     if issparse(norm_dict['X']):
             mean_percent = norm_dict['X'].mean(axis=0).A1
             top_idx = np.argsort(mean_percent)[::-1][:n_top]
-            counts_top_genes = norm_dict['X'][:, top_idx].A
+            # ----- ERROR here: attribute A doesn't exist
+            # might be a problem from scipy sparse matrix version
+            # problematic line:
+            ## counts_top_genes = norm_dict['X'][:, top_idx].A
+            X_top = norm_dict['X'][:, top_idx]
+            counts_top_genes = X_top.A if hasattr(X_top, "A") else X_top.toarray()
     else:
         mean_percent = norm_dict['X'].mean(axis=0)
         top_idx = np.argsort(mean_percent)[::-1][:n_top]

@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import seaborn as sns
 import panpipes.funcs as pnp
+from funcs import scmethods as scmethods
 from scipy.stats import rankdata
 
 import sys
@@ -138,8 +139,10 @@ if os.path.exists(args.figpath) is False:
 if 'rna' in mdata.mod.keys():
     L.info("Quantifying the top background features for RNA")
     sc.pl.highest_expr_genes(mdata_bg['rna'],n_top=30, save="_rna_background.png")
-    top_genes = pnp.scmethods.get_top_expressed_features(mdata_bg['rna'], n_top=30, group_by=args.channel_col)
-    bg_df = pnp.scmethods.get_mean_background_fraction(mdata_bg['rna'], top_background=top_genes, group_by=args.channel_col)
+    #top_genes = pnp.scmethods.get_top_expressed_features(mdata_bg['rna'], n_top=30, group_by=args.channel_col)
+    top_genes = scmethods.get_top_expressed_features(mdata_bg['rna'], n_top=30, group_by=args.channel_col)
+    #bg_df = pnp.scmethods.get_mean_background_fraction(mdata_bg['rna'], top_background=top_genes, group_by=args.channel_col)
+    bg_df = scmethods.get_mean_background_fraction(mdata_bg['rna'], top_background=top_genes, group_by=args.channel_col)
     if bg_df.shape[0] >1:
         fig, ax= plt.subplots(figsize=(12,8))
         sns.heatmap(bg_df, ax=ax)
@@ -160,7 +163,8 @@ if 'prot' in mdata.mod.keys():
     # this time we'll just use all the prot vars.
     L.info("Quantifying the top background features for prot")
     top_genes = list(mdata_bg['prot'].var_names)
-    bg_df = pnp.scmethods.get_mean_background_fraction(mdata_bg['prot'], top_background=top_genes, group_by=args.channel_col)
+    #bg_df = pnp.scmethods.get_mean_background_fraction(mdata_bg['prot'], top_background=top_genes, group_by=args.channel_col)
+    bg_df = scmethods.get_mean_background_fraction(mdata_bg['prot'], top_background=top_genes, group_by=args.channel_col)
     if bg_df.shape[0] >1:
         if len(top_genes) > 50:
             # split the plot into two
