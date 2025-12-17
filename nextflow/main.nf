@@ -70,3 +70,18 @@ workflow integration_single_cell {
     integration()
 
 }
+
+// ******* Combined workflows ******** //
+
+workflow ingest_preprocess_single_cell {
+
+
+    ingest()
+
+    def ch_pre_in = ingest.out.h5mu_qc.map { h5 ->
+        tuple(params.sample_prefix ?: params.sample_id, h5)
+    }
+
+    preprocess(ch_pre_in)
+}
+

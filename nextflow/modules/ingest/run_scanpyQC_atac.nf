@@ -16,7 +16,7 @@ process run_scanpy_qc_atac {
     output:
         tuple val(sample_id), path("${sample_id}_unfilt.h5mu"), emit: h5mu
         path("figures/atac/*"), emit: figures
-        path("logs/6_run_scanpyQC_atac_${sample_id}.log"), emit: log
+        path("logs/6_run_scanpy_qc_atac.log"), emit: log
         path("*_cell_metadata.tsv"), optional: true, emit: cell_metadata
 
     when:
@@ -56,6 +56,6 @@ process run_scanpy_qc_atac {
         --outfile "${sample_id}_unfilt.h5mu" \\
         --figdir "figures/atac" \\
         ${opts_str} \\
-        > "logs/6_run_scanpy_qc_atac_${sample_id}.log" 2>&1
+        > "logs/6_run_scanpy_qc_atac.log" 2>&1
     """
 }

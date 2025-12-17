@@ -9,8 +9,12 @@ include { preprocess_prot } from '../modules/preprocessing/run_preprocess_prot.n
 
 workflow preprocess {
 
-    main:
+    take:
 
+    tuple val(sample_id), path(unfiltered_obj) optional true
+
+    main:
+        // Fallback for standalone run 
         def prefix         = params.sample_id
         def filtering_map  = params.filtering
         def intersect_mods = params.intersect_mods
