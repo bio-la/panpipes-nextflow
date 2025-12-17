@@ -326,10 +326,10 @@ def run_neighbors_method_choice(adata, method, n_neighbors, n_pcs, metric, use_r
         logging.info("Computing neighbors using scanpy")
         from scanpy.pp import neighbors
         neighbors(adata,
-                        n_pcs=n_pcs,
-                        n_neighbors=n_neighbors,
-                        metric=metric,
-                        use_rep=use_rep)
+                            n_pcs=n_pcs,
+                            n_neighbors=n_neighbors,
+                            metric=metric,
+                            use_rep=use_rep)
     elif method == "hnsw":
         from scvelo.pp import neighbors
         logging.info("Computing neighbors using hnswlib (with scvelo a la pegasus!)")

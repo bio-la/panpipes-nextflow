@@ -29,23 +29,35 @@ message("Running with options:")
 
 print(opt)
 
+dir.create(dirname(opt$outfile), showWarnings = FALSE, recursive = TRUE)
+
 # # run clustree
 m = readr::read_tsv(opt$infile)
 # this is a little dodge, but works ;) 
-example_column=colnames(m)[2]
-col_prefix=substr(example_column, 1, nchar(example_column)-3 )
+#example_column=colnames(m)[2]
+#col_prefix=substr(example_column, 1, nchar(example_column)-3 )
 # run clustree
-print("Running Clustree")
-gg <- clustree(m, prefix =col_prefix) + ggtitle(opt$plot_title)
+#print("Running Clustree")
+#gg <- clustree(m, prefix =col_prefix) + ggtitle(opt$plot_title)
+
+prefixes <- unique(stringr::str_extract(colnames(m), "^[^_]+_(leiden|louvain)_res_"))
+prefixes <- prefixes[!is.na(prefixes)]
+
+for (prefix in prefixes) {
+  print(paste("Running Clustree for:", prefix))
+  gg <- clustree(m, prefix = prefix) + ggtitle(opt$plot_title)
+  print(paste("Saving Clustree for:", prefix))
+  ggsave(gg, filename=paste0(opt$outfile, "clustree_", prefix, ".png"), height=10,width=12, type="cairo", create.dir = TRUE)
+}
 
 
 #dir.create(figdir, showWarnings = FALSE, recursive = TRUE)
 #if (!(dir.exists(dirname(opt$outfile)))){
-dir.create(dirname(opt$outfile), showWarnings = FALSE, recursive = TRUE)
+#dir.create(dirname(opt$outfile), showWarnings = FALSE, recursive = TRUE)
 #}
 
 # save
-print("Saving Clustree")
-ggsave(gg, filename=opt$outfile, height=10,width=12, type="cairo")
+#print("Saving Clustree")
+#ggsave(gg, filename=opt$outfile, height=10,width=12, type="cairo")
 
 print("Done")

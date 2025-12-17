@@ -69,7 +69,7 @@ def plot_umap(adata,figdir):
     obsm_keys = [x for x in adata.obsm.keys() if re.search(pattern, x)]
     L.info("UMAP keys found: %s" % obsm_keys)
     # get all possible clustersclusters
-    pattern=re.compile(r'^leiden|^louvain') 
+    pattern=re.compile(r'(leiden|louvain)') 
     cluster_keys  = [x for x in adata.obs.columns if re.search(pattern, x)]
     L.info("Cluster keys found: %s" % cluster_keys)
     if len(obsm_keys) == 0  or len(cluster_keys) == 0:
@@ -103,10 +103,10 @@ mods = args.modalities.split(',')
 
 # do plotting
 if 'multimodal' in mods:
-    if os.path.exists("multimodal/figures") is False:
-        os.makedirs("multimodal/figures")
+    if os.path.exists("figures/multimodal") is False:
+        os.makedirs("figures/multimodal")
     L.info("Plotting multimodal figures")
-    plot_umap(data, figdir="multimodal/figures")
+    plot_umap(data, figdir="figures/multimodal")
 
 
 # we also need to plot per modality
@@ -114,7 +114,7 @@ if type(data) is MuData:
     for mod in data.mod.keys():
         if mod in mods:
             L.info("Plotting for modality: %s" % mod)
-            figdir  = os.path.join(mod, "figures")
+            figdir  = os.path.join("figures", mod)
             if os.path.exists(figdir) is False:
                 os.makedirs(figdir)
             #if mod == "spatial": # added separate function for spatial

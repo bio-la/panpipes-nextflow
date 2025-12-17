@@ -12,7 +12,7 @@ from anndata import AnnData
 from muon import MuData
 import yaml
 import os
-
+import json
 # import scpipelines.funcs as scp
 from panpipes.funcs.processing import intersect_obs_by_mod, remove_unused_categories
 from panpipes.funcs.io import write_obs, read_yaml, dictionary_stripper
@@ -63,6 +63,8 @@ parser.add_argument('--keep_barcodes', default=None,
                     help='1 column list of barcodes to keep, note that they should match the mudata input, this filtering happens first')
 parser.add_argument('--intersect_mods', default=None,
                     help='comma separated string of modalities we want to intersect_obs on')                 
+parser.add_argument("--filter_json", type=str, default=None,
+                    help="Filtering parameters as a JSON string (preferred).")
 
 
 # load options
@@ -71,11 +73,39 @@ args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
  
 # load the filtering dictionary 
-filter_dict = args.filter_dict
-if isinstance(args.filter_dict, dict):
+#filter_dict = args.filter_dict
+#if isinstance(args.filter_dict, dict):
+#    filter_dict = args.filter_dict
+#else:
+#    filter_dict = read_yaml(args.filter_dict) 
+if hasattr(args, 'filter_json') and args.filter_json:
+    try:
+        filter_dict = json.loads(args.filter_json)
+    except json.JSONDecodeError as e:
+        L.error(f"--filter_json is not valid JSON: {e}")
+        raise
+elif isinstance(args.filter_dict, dict):
     filter_dict = args.filter_dict
+elif isinstance(args.filter_dict, str) and args.filter_dict:
+    # Legacy path: a file path OR an inline JSON/YAML string
+    p = Path(args.filter_dict)
+    if p.exists():
+        filter_dict = read_yaml(str(p))
+    else:
+        # Try JSON literal first, then YAML
+        try:
+            filter_dict = json.loads(args.filter_dict)
+        except Exception:
+            try:
+                import yaml as _yaml
+                filter_dict = _yaml.safe_load(args.filter_dict)
+            except Exception as e:
+                raise ValueError(f"Could not parse --filter_dict as JSON or YAML: {e}")
 else:
-    filter_dict = read_yaml(args.filter_dict) 
+    raise ValueError("Provide filtering parameters via --filter_json (preferred) or --filter_dict (legacy).")
+
+
+
 
 # remove Nones for each level of filter dict
 filter_dict = map_nested_dicts_remove_none(filter_dict)
@@ -111,47 +141,47 @@ if args.keep_barcodes is not None:
 # L.debug(mdata.obs['sample_id'].value_counts())
 
 # filter more than
-if filter_dict['run']:
+#if filter_dict['run']: - removed because this is already decided by the nextflow module
     # this will go through the modalities one at a time,
     # then the categories max, min and bool
-    for mod in mdata.mod.keys():
-        L.info("Filtering modality '%s'" % mod)
-        if mod in filter_dict.keys():
-            for marg in filter_dict[mod].keys():
-                if marg == "obs":
-                    if "max" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['max'].items():
-                            L.info("Filtering cells of modality '%s' by '%s' in obs to less than %s" % (mod, col, n))
-                            mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x <= n)
-                            L.info("Remaining cells %d" % mdata[mod].n_obs)
-                    if "min" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['min'].items():
-                            L.info("Filtering cells of modality '%s' by '%s' in obs to more than %s" % (mod, col, n))
-                            mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x >= n)
-                            L.info("Remaining cells %d" % mdata[mod].n_obs)
-                    if "bool" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['bool'].items():
-                            L.info("Filtering cells of modality '%s' by '%s' in obs marked %s" % (mod, col, n))
-                            mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x == n)
-                            L.info("Remaining cells %d" % mdata[mod].n_obs)
-                if marg == "var":
-                    if "max" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['max'].items():
-                            L.info("Filtering features of modality '%s' by '%s' in .var to less than %s" % (mod, col, n))
-                            mu.pp.filter_var(mdata.mod[mod], col, lambda x: x <= n)
-                            L.info("Remaining features: %d" % mdata[mod].n_vars)
+for mod in mdata.mod.keys():
+    L.info("Filtering modality '%s'" % mod)
+    if mod in filter_dict.keys():
+        for marg in filter_dict[mod].keys():
+            if marg == "obs":
+                if "max" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['max'].items():
+                        L.info("Filtering cells of modality '%s' by '%s' in obs to less than %s" % (mod, col, n))
+                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x <= n)
+                        L.info("Remaining cells %d" % mdata[mod].n_obs)
+                if "min" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['min'].items():
+                        L.info("Filtering cells of modality '%s' by '%s' in obs to more than %s" % (mod, col, n))
+                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x >= n)
+                        L.info("Remaining cells %d" % mdata[mod].n_obs)
+                if "bool" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['bool'].items():
+                        L.info("Filtering cells of modality '%s' by '%s' in obs marked %s" % (mod, col, n))
+                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x == n)
+                        L.info("Remaining cells %d" % mdata[mod].n_obs)
+            if marg == "var":
+                if "max" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['max'].items():
+                        L.info("Filtering features of modality '%s' by '%s' in .var to less than %s" % (mod, col, n))
+                        mu.pp.filter_var(mdata.mod[mod], col, lambda x: x <= n)
+                        L.info("Remaining features: %d" % mdata[mod].n_vars)
 
-                    if "min" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['min'].items():
-                            L.info("Filtering features of modality '%s' by '%s' in .var to more than %s" % (mod, col, n))
-                            mu.pp.filter_var(mdata.mod[mod], col, lambda x: x >= n)
-                            L.info("Remaining features: %d" % mdata[mod].n_vars)
+                if "min" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['min'].items():
+                        L.info("Filtering features of modality '%s' by '%s' in .var to more than %s" % (mod, col, n))
+                        mu.pp.filter_var(mdata.mod[mod], col, lambda x: x >= n)
+                        L.info("Remaining features: %d" % mdata[mod].n_vars)
 
-                    if "bool" in filter_dict[mod][marg].keys():
-                        for col, n in filter_dict[mod][marg]['bool'].items():
-                            L.info("Filtering features of modality '%s' by '%s' in .var marked %s" % (mod, col, n))
-                            mu.pp.filter_var(mdata.mod[mod], col, lambda x: x == n)
-                            L.info("Remaining features: %d" % mdata[mod].n_vars)
+                if "bool" in filter_dict[mod][marg].keys():
+                    for col, n in filter_dict[mod][marg]['bool'].items():
+                        L.info("Filtering features of modality '%s' by '%s' in .var marked %s" % (mod, col, n))
+                        mu.pp.filter_var(mdata.mod[mod], col, lambda x: x == n)
+                        L.info("Remaining features: %d" % mdata[mod].n_vars)
                             
 
 mdata.update()
@@ -159,7 +189,7 @@ mdata.update()
 # intersect specific modalities
 # we don't want to just use mu.pp.intersect_obs, 
 # because we don't want to necessarily filter by repertoire
-if args.intersect_mods is not None:
+if args.intersect_mods:
     intersect_mods = args.intersect_mods.split(',')
     intersect_mods= [a.strip() for a in intersect_mods]
     L.info("Intersecting barcodes of modalities %s" % args.intersect_mods)

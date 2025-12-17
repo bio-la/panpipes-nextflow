@@ -52,6 +52,8 @@ parser.add_argument('--batch_size',
                     help="batch size scanorama parameter, default 5000", default="5000")
 parser.add_argument('--modality',
                     help="modality")
+parser.add_argument('--output_anndata',default=None,
+                    help='Path to write the corrected AnnData .h5ad (default: tmp/harmony_scaled_adata_<modality>.h5ad)')
 
 
 
@@ -61,17 +63,14 @@ L.info("Running with params: %s", args)
 
 # Scanorama is designed to be used in scRNA-seq pipelines downstream of noise-reduction methods,
 # including those for imputation and highly-variable gene filtering.
-#adata = read_anndata(args.input_anndata, use_muon=use_muon, modality="rna")
 L.info("Reading in MuData from '%s'" % args.input_anndata)
 mdata = mu.read(args.input_anndata)
 adata = mdata.mod[args.modality] 
 bcs = adata.obs_names.tolist()
 
-# scanorama can't integrate on 2+ variables, so create a fake column with combined information
 columns = [x.strip() for x in args.integration_col.split(",")]
 if len(columns) > 1:
     L.info("Using 2 columns to integrate on more variables")
-    # comb_columns = "_".join(columns)
     adata.obs["comb_columns"] = adata.obs[columns].apply(lambda x: '|'.join(x), axis=1)
 
     # make sure that batch is a categorical
@@ -85,11 +84,18 @@ batches = adata.obs['batch'].unique()
 # need contiguous batches
 scanorama_input = adata[adata.obs.sort_values(by="batch").index.tolist(), :]
 
-# filter by HVGs to make it equivalent to the old scripts,
-# which inputted the scaled object after filtering by hvgs.
-L.info("Filtering data by HVGs")
-scanorama_input = scanorama_input[:, scanorama_input.var.highly_variable]
-#also filter the X_PCA to be the number of PCs we actually want to use
+if 'highly_variable' in scanorama_input.var.columns:
+    L.info("Filtering data by HVGs")
+    scanorama_input = scanorama_input[:, scanorama_input.var['highly_variable']]
+else:
+    L.warning("No 'highly_variable' column found in .var; skipping HVG filtering")
+
+if 'X_pca' not in scanorama_input.obsm.keys():
+    L.info("X_pca not found; computing PCA")
+    # choose at least as many PCs as you intend to keep
+    n_pcs_wanted = int(args.neighbors_n_pcs)
+    sc.tl.pca(scanorama_input, n_comps=max(n_pcs_wanted, 50))
+
 L.info("Subsetting X_pca to %s PCs" % args.neighbors_n_pcs)
 scanorama_input.obsm['X_pca'] = scanorama_input.obsm['X_pca'][:,0:int(args.neighbors_n_pcs)]
 
@@ -99,16 +105,6 @@ L.info("Running scanorama")
 
 sce.pp.scanorama_integrate(scanorama_input, key='batch', batch_size=int(args.batch_size))
 
-# not integrated
-
-# old method (simplified)
-# alldata = {}
-# for bb in batches:
-#     alldata[bb] = scanorama_input[scanorama_input.obs['batch'] == bb]
-#
-# adatas = list(alldata.values())
-# X_scanorama = scanorama.integrate_scanpy(adatas)
-# scanorama_input.obsm['X_scanorama'] = np.concatenate(X_scanorama)
 
 # put into the original order
 scanorama_input = scanorama_input[bcs, :]
@@ -146,9 +142,23 @@ umap = pd.DataFrame(adata.obsm['X_umap'], adata.obs.index)
 L.info("Saving UMAP coordinates to csv file '%s" % args.output_csv)
 umap.to_csv(args.output_csv)
 
-# save the scanorama dim reduction in case scanorama is our favourite
-L.info("Saving AnnData to 'tmp/scanorama_scaled_adata.h5ad'")
-adata.write("tmp/scanorama_scaled_adata.h5ad")
+
+if args.output_anndata is not None:
+    outfile = args.output_anndata
+    if os.path.isdir(outfile) or not outfile.endswith('.h5ad'):
+        outfile = os.path.join(outfile, f"scanorama_scaled_adata_{args.modality}.h5ad")
+    outdir = os.path.dirname(outfile)
+    if outdir and not os.path.exists(outdir):
+        os.makedirs(outdir, exist_ok=True)
+else:
+    base_dir = os.path.dirname(args.output_csv)
+    if base_dir and not os.path.exists(base_dir):
+        os.makedirs(base_dir, exist_ok=True)
+    outfile = os.path.join(base_dir, f"scanorama_scaled_adata_{args.modality}.h5ad")
+
+
+L.info("Saving AnnData to '%s'" % outfile)
+write_anndata(adata, outfile, use_muon=False, modality=args.modality)
 
 L.info("Done")
 

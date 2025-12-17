@@ -49,7 +49,6 @@ L.info("Running with params: %s", args)
 
 # this should be an object that contains the full log normalised data (adata_log1p.h5ad)
 # prior to hvgs and filtering
-#adata = read_anndata(args.input_anndata, use_muon=use_muon, modality="rna")
 L.info("Reading in MuData from '%s'" % args.input_anndata)
 mdata = mu.read(args.input_anndata)
 adata = mdata.mod[args.modality] 
