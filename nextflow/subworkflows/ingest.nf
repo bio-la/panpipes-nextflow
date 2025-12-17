@@ -466,5 +466,11 @@ workflow ingest {
         assess_background(ch_assess_bg_in)
     }
 
+    // ------  Outputs for integration
+    emit:
+    h5mu_qc = ch_h5mu
+    cell_metadata = ch_meta
+    bg_h5mu = _bg_on ? bg_concat_adata.h5mu : Channel.empty()
+
 
 }
