@@ -10,15 +10,14 @@ include { preprocess_prot } from '../modules/preprocessing/run_preprocess_prot.n
 workflow preprocess {
 
     take:
-
-    tuple val(sample_id), path(unfiltered_obj) optional true
-
+        ch_mdata
+    
     main:
-        // Fallback for standalone run 
-        def prefix         = params.sample_id
-        def filtering_map  = params.filtering
-        def intersect_mods = params.intersect_mods
 
+        def prefix         = params.preprocess.sample_prefix ?: params.sample_id
+        def filtering_map  = params.preprocess.filtering
+        def intersect_mods = params.preprocess.intersect_mods
+        
     // ---------- helpers ----------
     def derivePrefix = { Path p ->
         // Start from basename without extension
@@ -29,17 +28,25 @@ workflow preprocess {
         return bn
     }
     // ---------- source channels ----------
-        Channel
-            .fromPath(params.unfiltered_obj, checkIfExists: true)
-            .set { ch_mdata }
+        // Channel
+        //     .fromPath(params.unfiltered_obj, checkIfExists: true)
+        //     .set { ch_mdata }
 
     // keep_barcodes passed as value (string or null)
-    def keep_path_str = params.filtering?.keep_barcodes?.toString()?.trim()
+    def keep_path_str = params.preprocess.filtering?.keep_barcodes?.toString()?.trim()
     if( keep_path_str == '' ) keep_path_str = null
 
     ch_mdata
-        .map { mfile -> tuple(prefix, mfile, prefix, filtering_map, intersect_mods, keep_path_str) }
-        | run_filter
+    .map { sid, mfile ->
+        def this_prefix = params.sample_prefix ?: sid ?: derivePrefix(mfile)
+        tuple(sid ?: this_prefix, mfile, this_prefix, filtering_map, intersect_mods, keep_path_str)
+    }
+    | run_filter
+
+
+    // Channel.of( tuple(sample_id, unfiltered_obj) ) \
+    //   | run_filter
+
 
 
     filtered_h5mu = run_filter.out.h5mu
@@ -51,12 +58,12 @@ workflow preprocess {
         .map { meta -> tuple(prefix, meta) }
         .set { filtered_meta_ch }
 
-    def groups = params.plotqc?.grouping_var ?: 'sample_id'
-    def rna_m = params.plotqc?.rna_metrics ?: ''
-    def prot_m = params.plotqc?.prot_metrics ?: ''
-    def rep_m = params.plotqc?.rep_metrics ?: ''
-    def atac_m = params.plotqc?.atac_metrics ?: ''
-    def mode = params.plotqc?.scanpy_or_muon ?: 'scanpy'
+    def groups = params.preprocess.plotqc?.grouping_var ?: 'sample_id'
+    def rna_m = params.preprocess.plotqc?.rna_metrics ?: ''
+    def prot_m = params.preprocess.plotqc?.prot_metrics ?: ''
+    def rep_m = params.preprocess.plotqc?.rep_metrics ?: ''
+    def atac_m = params.preprocess.plotqc?.atac_metrics ?: ''
+    def mode = params.preprocess.plotqc?.scanpy_or_muon ?: 'scanpy'
 
     plot_QC(
         filtered_meta_ch,
@@ -80,14 +87,14 @@ workflow preprocess {
     .set { ds_in_filtered }
 
     // Conditional downsample
-    def do_downsample = (params.downsample_n as Integer ?: 0) > 0
+    def do_downsample = (params.preprocess.downsample_n as Integer ?: 0) > 0
 
     if (do_downsample) {
     downsample(
         ds_in_filtered,
-        params.downsample_n,
-        (params.downsample_col  ?: 'sample_id'),
-        (params.downsample_mods ?: '')
+        params.preprocess.downsample_n,
+        (params.preprocess.downsample_col  ?: 'sample_id'),
+        (params.preprocess.downsample_mods ?: '')
     )
     ds_h5mu_ch = downsample.out.mudata
     ds_meta_ch = downsample.out.cellmeta
@@ -99,16 +106,16 @@ workflow preprocess {
     }
 
     // preprocess RNA
-    def hvg_map = (params.hvg ?: [:])
+    def hvg_map = (params.preprocess.hvg ?: [:])
     def pca_map = (params.pca ?: [:])
 
     preprocess_rna(
         ds_h5mu_ch,
-        (params.use_muon ?: false),
+        (params.preprocess.use_muon ?: false),
         hvg_map,
-        (params.regress_variables ?: ''),
-        (params.run_scale ?: true),
-        (params.scale_max_value ?: ''),
+        (params.preprocess.regress_variables ?: ''),
+        (params.preprocess.run_scale ?: true),
+        (params.preprocess.scale_max_value ?: ''),
         pca_map
     )
 
@@ -134,4 +141,19 @@ workflow preprocess {
     atac_mudata = preprocess_atac.out.mudata_atac_preprocessed
     atac_figs   = preprocess_atac.out.figures
 
+}
+
+workflow preprocess_standalone {
+
+    main:
+        Channel
+        .fromPath(params.preprocess.unfiltered_obj, checkIfExists: true)
+        .map { f -> tuple(params.preprocess.sample_prefix ?: params.preprocess.sample_id, f) }
+        | preprocess
+
+    emit:
+        filtered_h5mu = preprocess.out.filtered_h5mu
+        filtered_meta = preprocess.out.filtered_meta
+        filtered_cnts = preprocess.out.filtered_cnts
+        // etc (optional, but nice)
 }

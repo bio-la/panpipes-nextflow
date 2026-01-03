@@ -4,10 +4,10 @@ nextflow.enable.dsl=2
 process preprocess_rna {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: '*.h5mu'
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: '*_rna_figures'
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: 'filtered_genes.tsv'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: '*.h5mu'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: '*_rna_figures'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter/preprocess_rna", mode: 'copy', overwrite: true, pattern: 'filtered_genes.tsv'
 
     input:
 

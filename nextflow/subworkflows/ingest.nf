@@ -60,12 +60,12 @@ workflow ingest {
     //    .splitCsv(header: true)
 
     Channel
-    .fromPath(params.submission_file, checkIfExists: true)
+    .fromPath(params.ingest.submission_file, checkIfExists: true)
     .splitCsv(header: true)
     .count()
     .map { n ->
         if( n == 0 )
-        throw new IllegalArgumentException("Submission CSV appears empty: ${params.submission_file}")
+        throw new IllegalArgumentException("Submission CSV appears empty: ${params.ingest.submission_file}")
         0
     }
     .view { }
@@ -81,7 +81,7 @@ workflow ingest {
     ] as Set<String>
 
     Channel
-    .fromPath(params.submission_file, checkIfExists: true)
+    .fromPath(params.ingest.submission_file, checkIfExists: true)
     .splitCsv(header: true)
     .take(1)
     .map { row ->
@@ -104,7 +104,7 @@ workflow ingest {
 
         //check that rna is present
         Channel
-        .fromPath(params.submission_file, checkIfExists: true)
+        .fromPath(params.ingest.submission_file, checkIfExists: true)
         .splitCsv(header: true)
         .map { Map row ->
             def sid = row.sample_id
@@ -151,7 +151,7 @@ workflow ingest {
 
     // Get datasets Ids
     Channel
-    .fromPath(params.submission_file, checkIfExists: true)
+    .fromPath(params.ingest.submission_file, checkIfExists: true)
     .splitCsv(header: true)
     .map { Map row -> 
         row.sample_id as String 
@@ -165,7 +165,7 @@ workflow ingest {
 
     // Single channel with the submission path
     Channel
-        .fromPath(params.submission_file, checkIfExists: true)
+        .fromPath(params.ingest.submission_file, checkIfExists: true)
         .set { ch_submission_file }
 
     // ---------- ingest parameters from config ----------
@@ -193,15 +193,15 @@ workflow ingest {
     if( truthy(ingestMap.plot_10X_metrics) ) {
 
     ch_aggregate_metrics_in = Channel
-        .fromPath(params.submission_file, checkIfExists: true)
+        .fromPath(params.ingest.submission_file, checkIfExists: true)
         .splitCsv(header: true)
         .take(1)
         .map { Map row ->
             def sid = clean(row.sample_id)
             tuple(
-                sid ?: params.sample_prefix,
-                file(params.submission_file),
-                file(params.cellranger_column_conversion)
+                sid ?: params.ingest.sample_prefix,
+                file(params.ingest.submission_file),
+                file(params.ingest.cellranger_column_conversion)
             )
         }
 
@@ -310,10 +310,10 @@ workflow ingest {
             .join('+')
 
         tuple(
-            "${params.sample_prefix}${_bg_suffix}",
+            "${params.ingest.sample_prefix}${_bg_suffix}",
             bg_h5_list,
-            "${params.sample_prefix}${_bg_suffix}",
-            file(params.submission_file),
+            "${params.ingest.sample_prefix}${_bg_suffix}",
+            file(params.ingest.submission_file),
             params.ingest.concat_join_type,
             (params.ingest.metadatacols ?: null),
             null,
@@ -331,10 +331,10 @@ workflow ingest {
     .collect()
     .map { List h5_list ->
         tuple(
-            params.sample_prefix,
+            params.ingest.sample_prefix,
             h5_list,
-            "${params.sample_prefix}_unfilt",
-            file(params.submission_file),
+            "${params.ingest.sample_prefix}_unfilt",
+            file(params.ingest.submission_file),
             params.ingest.concat_join_type,
             (params.ingest.metadatacols ?: null),
             (params.ingest.barcode_mtd_include ? params.ingest.barcode_mtd_path : null),
@@ -357,7 +357,7 @@ workflow ingest {
     def ch_scrublet_scores_out = scrublet_out.scores
 
     // ------ scrublet output dir -----
-    def scrublet_dir_path = file("${params.outdir}/${params.mode}/ingest/scrublet")
+    def scrublet_dir_path = file("${params.outdir}/${params.ingest.mode}/ingest/scrublet")
 
     def ch_scrublet_dir = ch_scrublet_scores_out
     .collect()
@@ -371,7 +371,7 @@ workflow ingest {
     def ch_rna_qc_in = ch_unfilt_h5mu
         .combine(ch_scrublet_dir)
         .map { Path h5, Path scr ->
-            tuple(params.sample_prefix, h5, scr)
+            tuple(params.ingest.sample_prefix, h5, scr)
         }
 
     rna_qc = run_scanpy_qc_rna( ch_rna_qc_in )
@@ -380,7 +380,7 @@ workflow ingest {
 
     // ------- Run scanpy QC prot -------
     def ch_prot_qc_in = rna_qc.h5mu_qc.map { Path h5 ->
-        tuple(params.sample_prefix, h5)
+        tuple(params.ingest.sample_prefix, h5)
     }
     if( truthy(modalities.prot) ) {
         prot_qc = run_scanpy_qc_prot( ch_prot_qc_in )
@@ -400,7 +400,7 @@ workflow ingest {
         .combine(ch_bg_mudata_eff)
         .map { pair ->
             def (filtered_h5, bg_h5) = pair
-            tuple(params.sample_prefix, filtered_h5, bg_h5)
+            tuple(params.ingest.sample_prefix, filtered_h5, bg_h5)
         }
 
     run_preprocess_prot( ch_prot_in )
@@ -426,7 +426,7 @@ workflow ingest {
     
     // ------- Run Scanpy QC ATAC -------
     def ch_atac_input = ch_output_rep.map { Path h5 ->
-        tuple(params.sample_prefix, h5)
+        tuple(params.ingest.sample_prefix, h5)
     }
 
     def ch_after_atac = ch_output_rep
@@ -439,7 +439,7 @@ workflow ingest {
 
     // ------- Plot QC ----------
     def ch_plot_qc_in = ch_meta.map { Path tsv ->
-        tuple(params.sample_prefix, tsv)
+        tuple(params.ingest.sample_prefix, tsv)
     }
 
     plot_qc(ch_plot_qc_in)
@@ -450,11 +450,11 @@ workflow ingest {
     if( do_assess_bg ) {
 
         def ch_fg_keyed = ch_h5mu.map { Path fg ->
-            tuple(params.sample_prefix, fg)
+            tuple(params.ingest.sample_prefix, fg)
         }
 
         def ch_bg_keyed = bg_concat_adata.h5mu.map { Path bg ->
-            tuple(params.sample_prefix, bg)
+            tuple(params.ingest.sample_prefix, bg)
         }
 
         def ch_assess_bg_in = ch_fg_keyed

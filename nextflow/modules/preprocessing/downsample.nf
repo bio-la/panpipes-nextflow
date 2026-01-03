@@ -3,8 +3,8 @@ nextflow.enable.dsl=2
 
 process downsample {
     tag "${sample_id}"
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter", mode: 'copy', overwrite: true
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
         tuple val(sample_id), path(input_mudata)

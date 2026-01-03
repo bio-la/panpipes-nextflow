@@ -5,9 +5,9 @@ process aggregate_metrics {
 
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/tenx_metrics/*', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '10x_metrics.csv'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/tenx_metrics/*', saveAs: { file -> file }
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: '10x_metrics.csv'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     container 'mari3ga/panpipes-preprocessing:V3'
 

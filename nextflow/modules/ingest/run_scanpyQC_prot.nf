@@ -5,12 +5,11 @@ process run_scanpy_qc_prot {
 
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/prot/*', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_prot_cell_metadata.tsv"
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_prot_qc_metrics_per_${params.ingest.channel_col}.csv"
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_unfilt.h5mu"
-
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/prot/*', saveAs: { file -> file }
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_prot_cell_metadata.tsv"
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_prot_qc_metrics_per_${params.ingest.channel_col}.csv"
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: "${sample_id}_unfilt.h5mu"
     input:
     tuple val(sample_id), path(unfilt_h5mu)
 

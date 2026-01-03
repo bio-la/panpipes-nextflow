@@ -5,9 +5,9 @@ process downsample_mudata {
     tag "${sample_id}"
     label 'limit_blas'
 
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*.h5mu'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*_downsampled_cell_metadata.tsv'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*.h5mu'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*_downsampled_cell_metadata.tsv'
 
     input:
     tuple val(sample_id), \

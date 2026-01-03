@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process concat_adata {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     label 'limit_blas'
 

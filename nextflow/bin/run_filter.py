@@ -31,6 +31,37 @@ sc.settings.verbosity = 2  # verbosity: errors (0), warnings (1), info (2), hint
 # comment this because of numba issues
 # sc.logging.L.info_versions()
 
+def _resolve_obs_col(mdata, mod, col):
+    """Return an existing obs column name for this modality, or None."""
+    obs_cols = list(mdata.mod[mod].obs.columns)
+    if col in obs_cols:
+        return col
+
+    # Case-insensitive match 
+    lower_map = {c.lower(): c for c in obs_cols}
+    if col.lower() in lower_map:
+        return lower_map[col.lower()]
+
+    # Common aliases
+    aliases = {
+        "doublet_score": ["DoubletScore", "doublet_scores", "scrublet_score", "DoubletScore"],
+        "doublet_scores": ["DoubletScore", "doublet_score", "scrublet_score"],
+        "scrublet_score": ["DoubletScore", "doublet_score", "doublet_scores"],
+    }
+    for alt in aliases.get(col, []):
+        if alt in obs_cols:
+            return alt
+        if alt.lower() in lower_map:
+            return lower_map[alt.lower()]
+
+    # Sometimes stored in global MuData obs as "rna:DoubletScore"
+    global_key = f"{mod}:{col}"
+    if global_key in mdata.obs.columns:
+        # copy into modality obs so mu.pp.filter_obs can use it
+        mdata.mod[mod].obs[col] = mdata.obs[global_key].values
+        return col
+
+    return None
 
 
 def map_nested_dicts_remove_none(ob):
@@ -71,7 +102,7 @@ parser.add_argument("--filter_json", type=str, default=None,
 parser.set_defaults(verbose=True)
 args, opt = parser.parse_known_args()
 L.info("Running with params: %s", args)
- 
+
 # load the filtering dictionary 
 #filter_dict = args.filter_dict
 #if isinstance(args.filter_dict, dict):
@@ -152,17 +183,39 @@ for mod in mdata.mod.keys():
                 if "max" in filter_dict[mod][marg].keys():
                     for col, n in filter_dict[mod][marg]['max'].items():
                         L.info("Filtering cells of modality '%s' by '%s' in obs to less than %s" % (mod, col, n))
-                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x <= n)
+                        #mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x <= n)
+                        resolved = _resolve_obs_col(mdata, mod, col)
+                        if resolved is None:
+                            L.warning(
+                                f"Skipping obs filter for modality '{mod}': column '{col}' not found"
+                            )
+                            continue
+                        mu.pp.filter_obs(mdata.mod[mod], resolved, lambda x: x <= n)
                         L.info("Remaining cells %d" % mdata[mod].n_obs)
                 if "min" in filter_dict[mod][marg].keys():
                     for col, n in filter_dict[mod][marg]['min'].items():
                         L.info("Filtering cells of modality '%s' by '%s' in obs to more than %s" % (mod, col, n))
-                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x >= n)
+                        resolved = _resolve_obs_col(mdata, mod, col)
+                        if resolved is None:
+                            L.warning(
+                                f"Skipping obs filter for modality '{mod}': column '{col}' not found"
+                            )
+                            continue
+
+                        mu.pp.filter_obs(mdata.mod[mod], resolved, lambda x: x >= n)
+                        #mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x >= n)
                         L.info("Remaining cells %d" % mdata[mod].n_obs)
                 if "bool" in filter_dict[mod][marg].keys():
                     for col, n in filter_dict[mod][marg]['bool'].items():
                         L.info("Filtering cells of modality '%s' by '%s' in obs marked %s" % (mod, col, n))
-                        mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x == n)
+                        resolved = _resolve_obs_col(mdata, mod, col)
+                        if resolved is None:
+                            L.warning(
+                                f"Skipping obs filter for modality '{mod}': column '{col}' not found"
+                            )
+                            continue
+                        mu.pp.filter_obs(mdata.mod[mod], resolved, lambda x: x == n)
+                        #mu.pp.filter_obs(mdata.mod[mod], col, lambda x: x == n)
                         L.info("Remaining cells %d" % mdata[mod].n_obs)
             if marg == "var":
                 if "max" in filter_dict[mod][marg].keys():

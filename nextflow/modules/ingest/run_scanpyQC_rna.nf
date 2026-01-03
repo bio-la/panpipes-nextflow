@@ -4,9 +4,9 @@ nextflow.enable.dsl=2
 process run_scanpy_qc_rna {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/rna/*',  saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*_rna_cell_metadata.tsv'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: 'figures/rna/*',  saveAs: { file -> file }
+    publishDir "${params.ingest.outdir}/${params.ingest.mode}/ingest", mode: 'copy', overwrite: true, pattern: '*_rna_cell_metadata.tsv'
 
     label 'limit_blas'
 

@@ -3,16 +3,12 @@ nextflow.enable.dsl=2
 
 
 include { clustering_sc } from './subworkflows/clustering.nf'
-
-
-
-
 include { qc_spatial } from './subworkflows/qc_spatial.nf'
 include { spatial_preprocess } from './subworkflows/spatial_preprocessing.nf'
 include { spatial_clustering } from './subworkflows/spatial_clustering.nf'
 include { spatial_deconvolution } from './subworkflows/spatial_deconvolution.nf'
 include { ingest } from './subworkflows/ingest.nf'
-//include {preprocessing} from './subworkflows/preprocessing.nf'
+include { preprocess; preprocess_standalone } from './subworkflows/preprocess.nf'
 include { visualisation } from './subworkflows/visualisation.nf'
 include { integration } from './subworkflows/integration.nf'
 
@@ -70,6 +66,9 @@ workflow integration_single_cell {
     integration()
 
 }
+workflow preprocess_single_cell {
+        preprocess_standalone()
+    }
 
 // ******* Combined workflows ******** //
 
@@ -78,9 +77,11 @@ workflow ingest_preprocess_single_cell {
 
     ingest()
 
-    def ch_pre_in = ingest.out.h5mu_qc.map { h5 ->
-        tuple(params.sample_prefix ?: params.sample_id, h5)
-    }
+    def ch_pre_in = ingest.out.h5mu_qc.map { x ->
+    (x instanceof List && x.size() == 2)
+        ? tuple(x[0], x[1])
+        : tuple(params.sample_prefix ?: params.sample_id, x)
+}
 
     preprocess(ch_pre_in)
 }

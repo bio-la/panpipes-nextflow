@@ -4,9 +4,9 @@ nextflow.enable.dsl=2
 process preprocess_prot {
     tag { sample_id }
 
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_prot", mode: 'copy', overwrite: true, pattern: '*.h5mu'
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter/preprocess_prot", mode: 'copy', overwrite: true, pattern: '*_prot_figures'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter/preprocess_prot", mode: 'copy', overwrite: true, pattern: '*.h5mu'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter/preprocess_prot", mode: 'copy', overwrite: true, pattern: '*_prot_figures'
 
     input:
         tuple val(sample_id), path(mudata_in)
