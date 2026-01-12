@@ -3,14 +3,16 @@ nextflow.enable.dsl=2
 
 process clustering {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "clusters/$modality-$sample-$algorithm-$resolution-clusters.txt.gz" 
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "clusters/*.csv" 
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/3-$modality-$sample-$algorithm-$resolution-run_clustering.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "clusters/$modality-$sample-$algorithm-$resolution-clusters.txt.gz" 
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "clusters/*.csv" 
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/3-$modality-$sample-$algorithm-$resolution-run_clustering.log"
     
 
     input:
-        tuple( path(input_h5mu), val(sample) ) 
-        tuple( val(modality), val(resolution), val(algorithm), val(neighbors_key)) 
+        // tuple( path(input_h5mu), val(sample) ) 
+        // tuple( val(modality), val(resolution), val(algorithm), val(neighbors_key)) 
+    tuple path(input_h5mu), val(sample), val(modality), val(resolution), val(algorithm), val(neighbors_key)
+
 
     output:
         path("clusters/$modality-$sample-$algorithm-$resolution-clusters.txt.gz"), emit: clustering_txt_ch

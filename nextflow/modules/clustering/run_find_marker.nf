@@ -3,10 +3,10 @@ nextflow.enable.dsl=2
 
 process find_marker {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*markers.txt"
-    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*_signif.txt"
-    publishDir "$params.outdir_path", mode: 'copy', pattern:"markers/*.xlsx"
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/8-$sample-$modality-$algorithm-$resolution-find_markers.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern:"markers/*markers.txt"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern:"markers/*_signif.txt"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern:"markers/*.xlsx"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/8-$sample-$modality-$algorithm-$resolution-find_markers.log"
     
 
     input:

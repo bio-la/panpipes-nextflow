@@ -6,7 +6,7 @@ process plot_metrics {
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
 
-    publishDir "${params.outdir}/${params.mode}/visualisation/", mode: 'copy', overwrite: true
+    publishDir "${params.visualisation.outdir}/${params.visualisation.mode}/visualisation/", mode: 'copy', overwrite: true
 
 
     input:

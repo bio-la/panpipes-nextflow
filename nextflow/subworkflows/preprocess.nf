@@ -36,12 +36,17 @@ workflow preprocess {
     def keep_path_str = params.preprocess.filtering?.keep_barcodes?.toString()?.trim()
     if( keep_path_str == '' ) keep_path_str = null
 
+    // ch_mdata
+    // .map { sid, mfile ->
+    //     def this_prefix = params.sample_prefix ?: sid ?: derivePrefix(mfile)
+    //     tuple(sid ?: this_prefix, mfile, this_prefix, filtering_map, intersect_mods, keep_path_str)
+    // }
+    // | run_filter
+
     ch_mdata
-    .map { sid, mfile ->
-        def this_prefix = params.sample_prefix ?: sid ?: derivePrefix(mfile)
-        tuple(sid ?: this_prefix, mfile, this_prefix, filtering_map, intersect_mods, keep_path_str)
-    }
+    .map { sid, mfile -> tuple(sid, mfile, sid, filtering_map, intersect_mods, keep_path_str) }
     | run_filter
+
 
 
     // Channel.of( tuple(sample_id, unfiltered_obj) ) \

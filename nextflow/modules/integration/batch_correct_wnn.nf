@@ -4,9 +4,9 @@ nextflow.enable.dsl=2
 process batch_correct_wnn {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
 
     input:
         tuple val(sample_id), path(mdata), val(mod)
@@ -21,7 +21,7 @@ process batch_correct_wnn {
     def toList = { x -> x instanceof List ? x : x?.toString()?.split(',')*.trim().findAll{ it } ?: [] }
 
     // Modalities list (string) as in your config
-    def mm = params.multimodal?.WNN ?: [:]
+    def mm = params.integration.multimodal?.WNN ?: [:]
     def modalitiesStr = (mm.modalities instanceof List) ? mm.modalities.join(',') : (mm.modalities ?: 'rna,prot,atac')
 
     // Global WNN knobs (ensure integers/booleans where script expects them)
@@ -33,7 +33,7 @@ process batch_correct_wnn {
 
     // Per-modality KNN defaults
     def mmKnn = mm.knn ?: [:]
-    def fallback = params.multimodal?.neighbors ?: [:]
+    def fallback = params.integration.multimodal?.neighbors ?: [:]
     def rnacfg  = (mmKnn.rna  ?: [:]) + fallback
     def protcfg = (mmKnn.prot ?: [:]) + fallback
     def ataccfg = (mmKnn.atac ?: [:]) + fallback

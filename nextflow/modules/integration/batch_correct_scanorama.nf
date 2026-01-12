@@ -5,9 +5,9 @@ process batch_correct_scanorama {
     tag "$sample_id"
 
     
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
     tuple val(sample_id), path(mdata), val(mod)
@@ -23,12 +23,12 @@ process batch_correct_scanorama {
 
     script:
     
-    def col   = (params.rna?.column ?: 'batch').toString().trim()
-    def npcs  = params.rna?.neighbors?.npcs ?: 30
-    def k     = params.rna?.neighbors?.k    ?: 30
-    def met   = (params.rna?.neighbors?.metric ?: 'euclidean').toString()
-    def meth  = (params.rna?.neighbors?.method ?: 'scanpy').toString()
-    def bsize = params.rna?.scanorama?.batch_size ?: 5000
+    def col   = (params.integration.rna?.column ?: 'batch').toString().trim()
+    def npcs  = params.integration.rna?.neighbors?.npcs ?: 30
+    def k     = params.integration.rna?.neighbors?.k    ?: 30
+    def met   = (params.integration.rna?.neighbors?.metric ?: 'euclidean').toString()
+    def meth  = (params.integration.rna?.neighbors?.method ?: 'scanpy').toString()
+    def bsize = params.integration.rna?.scanorama?.batch_size ?: 5000
 
     def h5ad_out = "tmp/scvi_scaled_adata_rna.h5ad"
     """

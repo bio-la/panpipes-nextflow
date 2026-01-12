@@ -10,15 +10,33 @@ include { plot_metrics } from '../modules/visualisation/plot_metrics.nf'
 include { plot_feature_scatters } from '../modules/visualisation/plot_features_scatter.nf'
 
 workflow visualisation {
-    
+
+    take:
+        ch_mdata
+
     main:
-    Channel
-        .fromPath(params.mudata_obj)
-        .set { ch_mdata }
+
+    // Channel
+    //     .fromPath(params.mudata_obj)
+    //     .set { ch_mdata }
+    
+    // Normalise input so downstream always sees: tuple(sample_id, mdata_h5mu)
+    // When called from another workflow we usually get a tuple; when standalone we may get a Path.
+    def ch_mdata_t = ch_mdata.map { x ->
+        if( x instanceof List && x.size() == 2 ) {
+            // (sample_id, path)
+            return tuple(x[0], file(x[1]))
+        } else {
+            def p   = file(x)
+            def sid = params.visualisation.sample_id ?: p.baseName
+            return tuple(sid, p)
+        }
+    }
 
     def markerList = []
-    markerList += (params.custom_markers?.files?.full    ?: [])
-    markerList += (params.custom_markers?.files?.minimal ?: [])
+    markerList += (params.visualisation.custom_markers?.files?.full    ?: [])
+    markerList += (params.visualisation.custom_markers?.files?.minimal ?: [])
+
 
     Channel
         .fromList(markerList)
@@ -27,25 +45,25 @@ workflow visualisation {
     
     // modalities: only true, excluding multimodal/rep
     //Filtering a map (findAll) and extracting keys (keySet)
-    def modalityKeys = params.modalities
+    def modalityKeys = params.visualisation.modalities
         .findAll { k, v -> v == true && !['multimodal','rep'].contains(k) }
         .keySet()
     def modalities_str = modalityKeys.join(',')
 
     // group cols: space-separated string (preserves 'mod:var' syntax)
-    def group_cols_list = (params.grouping_vars instanceof List) ? params.grouping_vars : [params.grouping_vars]
+    def group_cols_list = (params.visualisation.grouping_vars instanceof List) ? params.visualisation.grouping_vars : [params.visualisation.grouping_vars]
     def group_cols_str  = group_cols_list.join(' ')
 
     // layers map:  inline string acceptable by the python script, YAML style
 
-    def layers_map = params.custom_markers?.layers ?: [:]
+    def layers_map = params.visualisation.custom_markers?.layers ?: [:]
     def layers_inline = '{' + layers_map.collect { k, v ->
         def arr = (v instanceof List) ? v : [v]
         "${k}: [${arr.join(', ')}]"
     }.join(', ') + '}'
 
-    // basis (for UMAPs) from params.embedding.*.basis where run == true
-    def basis_map = params.embedding
+    // basis (for UMAPs) from params.visualisation.embedding.*.basis where run == true
+    def basis_map = params.visualisation.embedding
         ?.findAll { mod, cfg -> cfg?.run == true && (cfg?.basis instanceof List) && cfg.basis }
         ?.collectEntries { mod, cfg -> [ (mod): cfg.basis ] } ?: [:]
     def basis_inline = '{' + basis_map.collect { k, v ->
@@ -54,25 +72,27 @@ workflow visualisation {
 
     //Tuples for each process
 
+    // ---------- marker dotplots ----------
     def ch_jobs = ch_marker_csv
         .combine(ch_mdata)
         .map { marker_csv, mdata ->
             // Use a stable tag; prefer params.sample_id if defined, else baseName of mdata
-            def sample_id = params.sample_id ?: file(mdata).baseName
+            def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
             tuple(sample_id, mdata, marker_csv, modalities_str, group_cols_str, layers_inline)
         }
     
+    // ---------- marker UMAPs ----------
     //umaps (plot_custom_markers_umap) 
     def ch_jobs_umap = ch_marker_csv
         .combine(ch_mdata)
         .map { marker_csv, mdata ->
-            def sample_id = (params.sample_id ?: file(mdata).baseName)
+            def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
             tuple(sample_id, mdata, marker_csv, modalities_str, layers_inline, basis_inline)
         }
     
     // ---------- categorical variables inline ----------
     // Merging per-modality and all buckets
-    def cat_vars_cfg = params.categorical_vars ?: [:]
+    def cat_vars_cfg = params.visualisation.categorical_vars ?: [:]
     def cat_all = (cat_vars_cfg.containsKey('all') && cat_vars_cfg.all instanceof List) ? cat_vars_cfg.all : []
     def cat_vars_merged = [:]
     modalityKeys.each { mod ->
@@ -86,7 +106,7 @@ workflow visualisation {
     def categorical_inline = '{' + cat_vars_merged.collect { k, v -> "${k}: [${v.join(', ')}]" }.join(', ') + '}'
 
     // ---------- continuous variables inline ----------
-    def cont_vars_cfg = params.continuous_vars ?: [:]
+    def cont_vars_cfg = params.visualisation.continuous_vars ?: [:]
     def cont_all = (cont_vars_cfg.containsKey('all') && cont_vars_cfg.all instanceof List) ? cont_vars_cfg.all : []
     def cont_vars_merged = [:]
     modalityKeys.each { mod ->
@@ -101,7 +121,7 @@ workflow visualisation {
 
     // ---------- categorical variables ----------
     def ch_jobs_vars_cat = ch_mdata.map { mdata ->
-        def sample_id = (params.sample_id ?: file(mdata).baseName)
+        def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
         def fig_suffix = 'categorical_vars.png'
         def type = 'categorical'
         tuple(sample_id, mdata, basis_inline, categorical_inline, '{}', fig_suffix, type)
@@ -109,14 +129,14 @@ workflow visualisation {
 
     // ---------- continuous variables ----------
     def ch_jobs_vars_cont = ch_mdata.map { mdata ->
-        def sample_id = (params.sample_id ?: file(mdata).baseName)
+        def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
         def fig_suffix = 'continuous_vars.png'
         def type = 'continuous'
         tuple(sample_id, mdata, basis_inline, '{}', continuous_inline, fig_suffix, type)
     }
 
     def ch_meta_jobs = ch_mdata.map { mdata ->
-        def sample_id = params.sample_id ?: file(mdata).baseName
+        def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
         tuple(sample_id, mdata)
     }
 
@@ -126,7 +146,7 @@ workflow visualisation {
     // Building JSON from maps for the R script
     def toJson = groovy.json.JsonOutput.&toJson
 
-    def grouping_list = (params.grouping_vars instanceof List) ? params.grouping_vars : [params.grouping_vars]
+    def grouping_list = (params.visualisation.grouping_vars instanceof List) ? params.visualisation.grouping_vars : [params.visualisation.grouping_vars]
     def grouping_map  = [:].withDefault { [] }
     grouping_list.each { v ->
         if (v instanceof String && v.contains(':')) {
@@ -137,13 +157,12 @@ workflow visualisation {
         }
     }
     def grouping_json    = toJson(grouping_map)
-    def categorical_json = toJson(params.categorical_vars ?: [:])
-    def continuous_json  = toJson(params.continuous_vars  ?: [:])
-
+    def categorical_json = toJson(params.visualisation.categorical_vars ?: [:])
+    def continuous_json  = toJson(params.visualisation.continuous_vars  ?: [:])
     // Booleans from params.do_plots
-    def dp = (params instanceof Map && params.containsKey('do_plots')) \
-         ? params.do_plots \
-         : [ categorical_barplots:true, categorical_stacked_barplots:true, continuous_violin:true ]
+    def dp = (params instanceof Map && params.visualisation.containsKey('do_plots')) \
+        ? params.visualisation.do_plots \
+        : [ categorical_barplots:true, categorical_stacked_barplots:true, continuous_violin:true ]
 
     def do_bar     = (dp?.categorical_barplots         ? 'true' : 'false')
     def do_stacked = (dp?.categorical_stacked_barplots ? 'true' : 'false')
@@ -152,29 +171,29 @@ workflow visualisation {
     // Build jobs: take the metadata TSV path from write_metadata,
     // infer sample_id from file name if not provided
     def ch_metrics_jobs = write_metadata.out.map { meta_file ->
-        def sid = params.sample_id ?: file(meta_file).name.replaceFirst(/_cell_metadata\\.tsv$/, '')
+        def sid = params.visualisation.sample_id ?: file(meta_file).name.replaceFirst(/_cell_metadata\\.tsv$/, '')
         tuple(sid, meta_file, grouping_json, categorical_json, continuous_json,
-              do_bar, do_stacked, do_violin)
+            do_bar, do_stacked, do_violin)
     }
 
     //Guarded access to optional params (no warnings)
     def scatterList = []
 
     // Only read params.paired_scatters if it exists and is non-empty
-    if (params instanceof Map && params.containsKey('paired_scatters') && params.paired_scatters) {
-        def v = params.paired_scatters
+    if (params instanceof Map && params.visualisation.containsKey('paired_scatters') && params.visualisation.paired_scatters) {
+        def v = params.visualisation.paired_scatters
         scatterList += (v instanceof List ? v : [v])
     }
 
     // Also check nested: custom_markers.files.paired_scatters
-    def cm      = params.custom_markers ?: [:]
+    def cm      = params.visualisation.custom_markers ?: [:]
     def cmfiles = (cm instanceof Map && cm.containsKey('files')) ? cm.files : [:]
     if (cmfiles instanceof Map && cmfiles.containsKey('paired_scatters') && cmfiles.paired_scatters) {
         def extra = cmfiles.paired_scatters
         scatterList += (extra instanceof List ? extra : [extra])
     }
 
-    scatterList = (scatterList as Set).toList
+    scatterList = (scatterList as Set).toList()
 
 
     Channel
@@ -186,7 +205,7 @@ workflow visualisation {
     def ch_scatter_jobs = ch_scatter_csv
         .combine(ch_mdata)
         .map { scatters_csv, mdata ->
-            def sample_id = (params.sample_id ?: file(mdata).baseName)
+            def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
             tuple(sample_id, mdata, layers_inline, scatters_csv)
         }
     
@@ -206,4 +225,23 @@ workflow visualisation {
     cell_metadata = write_metadata.out.metadata_file
     metrics_plots = plot_metrics.out
 
+}
+
+// Standalone entry-point
+workflow visualisation_standalone {
+
+    main:
+        Channel
+            .fromPath(params.visualisation.mudata_obj, checkIfExists: true)
+            .set { ch_mdata }
+
+        visualisation(ch_mdata)
+
+    emit:
+        dotplots      = visualisation.out.dotplots
+        umapplots     = visualisation.out.umapplots
+        umap_cat      = visualisation.out.umap_cat
+        umap_cont     = visualisation.out.umap_cont
+        cell_metadata = visualisation.out.cell_metadata
+        metrics_plots = visualisation.out.metrics_plots
 }

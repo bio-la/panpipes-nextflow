@@ -5,8 +5,8 @@ process write_metadata {
     tag "$sample_id"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
 
-    
-    publishDir "${params.outdir}/${params.mode}/visualisation/", mode: 'copy', overwrite: true
+
+    publishDir "${params.visualisation.outdir}/${params.visualisation.mode}/visualisation/", mode: 'copy', overwrite: true
 
     input:
     tuple val(sample_id), path(mdata)

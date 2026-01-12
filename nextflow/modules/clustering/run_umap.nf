@@ -3,13 +3,17 @@ nextflow.enable.dsl=2
 
 process umap {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "umap_coords/$sample-$modality-$min_dist-umap.txt.gz" 
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/2-$sample-$modality-$min_dist-run_umap.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "umap_coords/$sample-$modality-$min_dist-umap.txt.gz" 
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/2-$sample-$modality-$min_dist-run_umap.log"
     
 
+    // input:
+    //     tuple(path(input_h5mu), val(sample)) 
+    //     tuple val(modality), val(min_dist), val(neighbors_key)
     input:
-        tuple(path(input_h5mu), val(sample)) 
-        tuple val(modality), val(min_dist), val(neighbors_key)
+    tuple path(input_h5mu), val(sample), val(modality), val(min_dist), val(neighbors_key)
+
+
 
     output:
         path("umap_coords/$sample-$modality-$min_dist-umap.txt.gz"), emit: umap_txt_ch

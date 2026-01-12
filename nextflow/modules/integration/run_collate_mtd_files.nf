@@ -3,7 +3,7 @@ nextflow.enable.dsl=2
 
     process collate_umaps {
     tag "${sample_id}"
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true
 
 
     input:
@@ -20,10 +20,10 @@ nextflow.enable.dsl=2
     umap_csvs && umap_csvs.size() > 0
 
     script:
-    def rna_col  = params.rna?.column
-    def prot_col = params.prot?.column
-    def atac_col = params.atac?.column
-    def mm_col   = params.multimodal?.column_categorical
+    def rna_col  = params.integration.rna?.column
+    def prot_col = params.integration.prot?.column
+    def atac_col = params.integration.atac?.column
+    def mm_col   = params.integration.multimodal?.column_categorical
 
     def rnaArg  = rna_col  ? "--rna_integration_col '${rna_col}'"   : ""
     def protArg = prot_col ? "--prot_integration_col '${prot_col}'" : ""

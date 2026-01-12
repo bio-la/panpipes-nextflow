@@ -5,7 +5,7 @@ process batch_correct_merge {
     tag { sample_id }
 
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: '*.h5mu'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: '*.h5mu'
 
     input:
     tuple val(sample_id),
@@ -26,7 +26,7 @@ process batch_correct_merge {
     def protArg  = (prot_list && prot_list.size() > 0) ? "--prot_obj ${prot_list[0]}" : ""
     def atacArg  = (atac_list && atac_list.size() > 0) ? "--atac_obj ${atac_list[0]}" : ""
     def multiArg = (multi_list && multi_list.size()> 0) ? "--multi_obj ${multi_list[0]}" : ""
-    def prefer   = params.integration_prefer_multimodal == false ? "false" : "true"
+    def prefer   = params.integration.integration_prefer_multimodal == false ? "false" : "true"
 
     """
     mkdir -p logs

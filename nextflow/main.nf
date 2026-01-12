@@ -2,15 +2,15 @@
 nextflow.enable.dsl=2
 
 
-include { clustering_sc } from './subworkflows/clustering.nf'
+include { clustering_sc; clustering_standalone } from './subworkflows/clustering.nf'
 include { qc_spatial } from './subworkflows/qc_spatial.nf'
 include { spatial_preprocess } from './subworkflows/spatial_preprocessing.nf'
 include { spatial_clustering } from './subworkflows/spatial_clustering.nf'
 include { spatial_deconvolution } from './subworkflows/spatial_deconvolution.nf'
 include { ingest } from './subworkflows/ingest.nf'
 include { preprocess; preprocess_standalone } from './subworkflows/preprocess.nf'
-include { visualisation } from './subworkflows/visualisation.nf'
-include { integration } from './subworkflows/integration.nf'
+include { visualisation; visualisation_standalone } from './subworkflows/visualisation.nf'
+include { integration; integration_standalone } from './subworkflows/integration.nf'
 
 
 
@@ -57,13 +57,13 @@ workflow ingest_single_cell{
 
 workflow visualisation_single_cell {
 
-    visualisation()
+    visualisation_standalone()
 
 }
 
 workflow integration_single_cell {
 
-    integration()
+    integration_standalone()
 
 }
 workflow preprocess_single_cell {
@@ -72,7 +72,7 @@ workflow preprocess_single_cell {
 
 // ******* Combined workflows ******** //
 
-workflow ingest_preprocess_single_cell {
+workflow ingest_to_clustering_single_cell {
 
 
     ingest()
@@ -84,5 +84,8 @@ workflow ingest_preprocess_single_cell {
 }
 
     preprocess(ch_pre_in)
+    integration_out = integration(preprocess.out.filtered_h5mu)
+    clustering_sc( integration_out.merged_obj )
+
 }
 

@@ -3,8 +3,8 @@ nextflow.enable.dsl=2
 
 process plot_markers {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', pattern:"figures/*/*.png"
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/9-$sample-$modality-$algorithm-$resolution-plot_markers.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern:"figures/*/*.png"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/9-$sample-$modality-$algorithm-$resolution-plot_markers.log"
     
 
     input:

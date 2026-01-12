@@ -4,10 +4,10 @@ nextflow.enable.dsl=2
 process batch_correct_bbknn {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+
     input:
     tuple val(sample_id), path(mdata), val(mod)
 
@@ -18,12 +18,12 @@ process batch_correct_bbknn {
     tuple val(sample_id), val(mod), path("logs/*_bbknn.log"), optional: true,            emit: umap_log
 
     script:
-    def cfg = [ rna: params.rna ?: [:], prot: params.prot ?: [:], atac: params.atac ?: [:] ][mod] ?: [:]
+    def cfg = [ rna: params.integration.rna ?: [:], prot: params.integration.prot ?: [:], atac: params.integration.atac ?: [:] ][mod] ?: [:]
 
     def col     = (cfg?.column ?: 'batch').toString().trim()
     def npcs    = cfg?.neighbors?.npcs ?: 50
     def within  = cfg?.bbknn?.neighbors_within_batch
-    def dimred  = (mod == 'atac') ? (params.atac?.dimred ?: 'PCA') : 'PCA'
+    def dimred  = (mod == 'atac') ? (params.integration.atac?.dimred ?: 'PCA') : 'PCA'
 
     def within_flag = within ? "--neighbors_within_batch ${within}" : ""
     def dimred_flag = (mod == 'atac') ? "--dimred ${dimred}" : ""
