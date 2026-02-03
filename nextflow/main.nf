@@ -72,7 +72,7 @@ workflow preprocess_single_cell {
 
 // ******* Combined workflows ******** //
 
-workflow ingest_to_clustering_single_cell {
+workflow ingest_to_visualisation_single_cell {
 
 
     ingest()
@@ -85,7 +85,8 @@ workflow ingest_to_clustering_single_cell {
 
     preprocess(ch_pre_in)
     integration_out = integration(preprocess.out.filtered_h5mu)
-    clustering_sc( integration_out.merged_obj )
+    clustering_out = clustering_sc( integration_out.merged_obj )
+    visualisation(clustering_out.collated_mdata)
 
 }
 

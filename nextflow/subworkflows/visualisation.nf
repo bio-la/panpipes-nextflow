@@ -54,7 +54,6 @@ workflow visualisation {
     def group_cols_list = (params.visualisation.grouping_vars instanceof List) ? params.visualisation.grouping_vars : [params.visualisation.grouping_vars]
     def group_cols_str  = group_cols_list.join(' ')
 
-    // layers map:  inline string acceptable by the python script, YAML style
 
     def layers_map = params.visualisation.custom_markers?.layers ?: [:]
     def layers_inline = '{' + layers_map.collect { k, v ->
@@ -74,19 +73,25 @@ workflow visualisation {
 
     // ---------- marker dotplots ----------
     def ch_jobs = ch_marker_csv
-        .combine(ch_mdata)
-        .map { marker_csv, mdata ->
+        // .combine(ch_mdata)
+        // .map { marker_csv, mdata ->
             // Use a stable tag; prefer params.sample_id if defined, else baseName of mdata
-            def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
+            // def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
+        .combine(ch_mdata_t)
+        .map { marker_csv, sid, mdata ->
+            def sample_id = params.visualisation.sample_id ?: sid
             tuple(sample_id, mdata, marker_csv, modalities_str, group_cols_str, layers_inline)
         }
     
     // ---------- marker UMAPs ----------
     //umaps (plot_custom_markers_umap) 
     def ch_jobs_umap = ch_marker_csv
-        .combine(ch_mdata)
-        .map { marker_csv, mdata ->
-            def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+        // .combine(ch_mdata)
+        // .map { marker_csv, mdata ->
+        //     def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+        .combine(ch_mdata_t)
+        .map { marker_csv, sid, mdata ->
+            def sample_id = (params.visualisation.sample_id ?: sid)
             tuple(sample_id, mdata, marker_csv, modalities_str, layers_inline, basis_inline)
         }
     
@@ -120,23 +125,29 @@ workflow visualisation {
     def continuous_inline = '{' + cont_vars_merged.collect { k, v -> "${k}: [${v.join(', ')}]" }.join(', ') + '}'
 
     // ---------- categorical variables ----------
-    def ch_jobs_vars_cat = ch_mdata.map { mdata ->
-        def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+    // def ch_jobs_vars_cat = ch_mdata.map { mdata ->
+    //     def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+    def ch_jobs_vars_cat = ch_mdata_t.map { sid, mdata ->
+        def sample_id = (params.visualisation.sample_id ?: sid)
         def fig_suffix = 'categorical_vars.png'
         def type = 'categorical'
         tuple(sample_id, mdata, basis_inline, categorical_inline, '{}', fig_suffix, type)
     }
 
     // ---------- continuous variables ----------
-    def ch_jobs_vars_cont = ch_mdata.map { mdata ->
-        def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+    // def ch_jobs_vars_cont = ch_mdata.map { mdata ->
+    //     def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+    def ch_jobs_vars_cont = ch_mdata_t.map { sid, mdata ->
+        def sample_id = (params.visualisation.sample_id ?: sid)
         def fig_suffix = 'continuous_vars.png'
         def type = 'continuous'
         tuple(sample_id, mdata, basis_inline, '{}', continuous_inline, fig_suffix, type)
     }
 
-    def ch_meta_jobs = ch_mdata.map { mdata ->
-        def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
+    // def ch_meta_jobs = ch_mdata.map { mdata ->
+    //     def sample_id = params.visualisation.sample_id ?: file(mdata).baseName
+    def ch_meta_jobs = ch_mdata_t.map { sid, mdata ->
+        def sample_id = params.visualisation.sample_id ?: sid
         tuple(sample_id, mdata)
     }
 
@@ -203,9 +214,12 @@ workflow visualisation {
 
     // Build scatter jobs: one job per CSV and mdata
     def ch_scatter_jobs = ch_scatter_csv
-        .combine(ch_mdata)
-        .map { scatters_csv, mdata ->
-            def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+        // .combine(ch_mdata)
+        // .map { scatters_csv, mdata ->
+        //     def sample_id = (params.visualisation.sample_id ?: file(mdata).baseName)
+        .combine(ch_mdata_t)
+        .map { scatters_csv, sid, mdata ->
+            def sample_id = (params.visualisation.sample_id ?: sid)
             tuple(sample_id, mdata, layers_inline, scatters_csv)
         }
     
