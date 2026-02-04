@@ -4,8 +4,8 @@ nextflow.enable.dsl=2
 process run_scib {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'scib/**/*.{png,csv}', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/run_scib.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'scib/**/*.{png,csv}', saveAs: { file -> file }
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/run_scib.log'
 
     
     input:
@@ -17,9 +17,9 @@ process run_scib {
 
     script:
     // optional cell-type columns from nextflow.config:
-    def rna_ct  = (params.scib?.rna  instanceof String && params.scib?.rna?.trim())  ? params.scib.rna.trim()  : null
-    def prot_ct = (params.scib?.prot instanceof String && params.scib?.prot?.trim()) ? params.scib.prot.trim() : null
-    def atac_ct = (params.scib?.atac instanceof String && params.scib?.atac?.trim()) ? params.scib.atac.trim() : null
+    def rna_ct  = (params.integration.scib?.rna  instanceof String && params.integration.scib?.rna?.trim())  ? params.integration.scib.rna.trim()  : null
+    def prot_ct = (params.integration.scib?.prot instanceof String && params.integration.scib?.prot?.trim()) ? params.integration.scib.prot.trim() : null
+    def atac_ct = (params.integration.scib?.atac instanceof String && params.integration.scib?.atac?.trim()) ? params.integration.scib.atac.trim() : null
 
     def extra = []
     if (rna_ct)  extra << "--rna_cell_type '${rna_ct}'"
@@ -28,7 +28,7 @@ process run_scib {
     def extra_args = extra.join(' ')
 
     // threads
-    def n_threads = params.resources?.threads_medium ?: 1
+    def n_threads = params.integration.resources?.threads_medium ?: 1
 
     """
     mkdir -p scib logs

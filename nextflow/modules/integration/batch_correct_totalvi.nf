@@ -5,12 +5,11 @@ process batch_correct_totalvi {
     tag "${sample_id}"
 
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'figures/**/*.png', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/scvi_model/**', saveAs: { file -> file }
-
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'figures/**/*.png', saveAs: { file -> file }
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/scvi_model/**', saveAs: { file -> file }
     input:
         tuple val(sample_id), path(mdata),val(mod)
 
@@ -23,30 +22,29 @@ process batch_correct_totalvi {
 
     script:
     // JSON blobs from config (drop nulls)
-    def modelArgsJson    = groovy.json.JsonOutput.toJson( (params.multimodal?.totalvi?.model_args    ?: [:]).findAll{ it.value != null } )
-    def trainingArgsJson = groovy.json.JsonOutput.toJson( (params.multimodal?.totalvi?.training_args ?: [:]).findAll{ it.value != null } )
-    def trainingPlanJson = groovy.json.JsonOutput.toJson( (params.multimodal?.totalvi?.training_plan ?: [:]).findAll{ it.value != null } )
+    def modelArgsJson    = groovy.json.JsonOutput.toJson( (params.integration.multimodal?.totalvi?.model_args    ?: [:]).findAll{ it.value != null } )
+    def trainingArgsJson = groovy.json.JsonOutput.toJson( (params.integration.multimodal?.totalvi?.training_args ?: [:]).findAll{ it.value != null } )
+    def trainingPlanJson = groovy.json.JsonOutput.toJson( (params.integration.multimodal?.totalvi?.training_plan ?: [:]).findAll{ it.value != null } )
 
     // Integration columns
-    def catCol  = params.multimodal?.column_categorical
-    def contCol = params.multimodal?.column_continuous
+    def catCol  = params.integration.multimodal?.column_categorical
+    def contCol = params.integration.multimodal?.column_continuous
     def catFlag  = catCol  ? "--integration_col_categorical \"${catCol}\""   : ""
     def contFlag = contCol ? "--integration_col_continuous \"${contCol}\""   : ""
 
 
     // Neighbors & misc
-    def ncfg   = params.multimodal?.neighbors ?: [:]
+    def ncfg   = params.integration.multimodal?.neighbors ?: [:]
     def method = ncfg.method ?: 'scanpy'
     def metric = ncfg.metric ?: 'euclidean'
     def npcs   = ncfg.npcs   ?: 50
     def k      = ncfg.k      ?: 30
 
-    def seed        = params.multimodal?.totalvi?.seed ?: 1492
-    def excludeMt   = (params.multimodal?.totalvi?.exclude_mt_genes    != null) ? params.multimodal.totalvi.exclude_mt_genes    : true
-    def mtColumn    = params.multimodal?.totalvi?.mt_column ?: 'mt'
-    def filterHvg   = (params.multimodal?.totalvi?.filter_by_hvg       != null) ? params.multimodal.totalvi.filter_by_hvg       : true
-    def filterProt  = (params.multimodal?.totalvi?.filter_prot_outliers!= null) ? params.multimodal.totalvi.filter_prot_outliers: false
-
+    def seed        = params.integration.multimodal?.totalvi?.seed ?: 1492
+    def excludeMt   = (params.integration.multimodal?.totalvi?.exclude_mt_genes    != null) ? params.integration.multimodal.totalvi.exclude_mt_genes    : true
+    def mtColumn    = params.integration.multimodal?.totalvi?.mt_column ?: 'mt'
+    def filterHvg   = (params.integration.multimodal?.totalvi?.filter_by_hvg       != null) ? params.integration.multimodal.totalvi.filter_by_hvg       : true
+    def filterProt  = (params.integration.multimodal?.totalvi?.filter_prot_outliers!= null) ? params.integration.multimodal.totalvi.filter_prot_outliers: false
     def figdir = "figures/multimodal/totalvi"
     def h5mu_out = "tmp/totalvi_scaled_adata.h5mu"
 

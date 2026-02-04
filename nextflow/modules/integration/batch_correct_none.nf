@@ -5,10 +5,10 @@ process batch_correct_none {
     tag "$sample_id"
 
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+
     input:
     tuple val(sample_id), path(mdata), val(mod)
 
@@ -19,7 +19,7 @@ process batch_correct_none {
 
     script:
     // per-modality config
-    def cfg = [ rna: params.rna ?: [:], prot: params.prot ?: [:], atac: params.atac ?: [:] ][mod] ?: [:]
+    def cfg = [ rna: params.integration.rna ?: [:], prot: params.integration.prot ?: [:], atac: params.integration.atac ?: [:] ][mod] ?: [:]
     // Common parameters
     def col     = (cfg?.column ?: 'batch').toString().trim()
     def n_pcs   = (cfg?.neighbors?.npcs   ?: 30)
@@ -37,7 +37,7 @@ process batch_correct_none {
                 :   mod == 'prot' ? '2_prot_no_correct.log'
                 :                   '3_atac_no_correct.log')
 
-    def threads = (params.resources?.threads_high ?: 1)
+    def threads = (params.integration.resources?.threads_high ?: 1)
     """
     mkdir -p logs tmp batch_correction 
 

@@ -6,9 +6,9 @@ process batch_correct_harmony {
 
     
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5ad'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
     tuple val(sample_id), path(mdata), val(mod)
@@ -21,7 +21,7 @@ process batch_correct_harmony {
     // only run if this modality is enabled and has harmony 
     when:
     {
-    def cfg = [ rna: params.rna ?: [:], prot: params.prot ?: [:], atac: params.atac ?: [:] ][mod] ?: [:]
+    def cfg = [ rna: params.integration.rna ?: [:], prot: params.integration.prot ?: [:], atac: params.integration.atac ?: [:] ][mod] ?: [:]
     def runIt = (cfg?.run in [true, 'true'])
     def tools = (cfg?.tools instanceof List) ? cfg.tools
                 : (cfg?.tools ? cfg.tools.toString().split(/\s*,\s*/) : [])
@@ -30,7 +30,7 @@ process batch_correct_harmony {
 
     script:
     // Per-modality
-    def cfg = [ rna: params.rna ?: [:], prot: params.prot ?: [:], atac: params.atac ?: [:] ][mod] ?: [:]
+    def cfg = [ rna: params.integration.rna ?: [:], prot: params.integration.prot ?: [:], atac: params.integration.atac ?: [:] ][mod] ?: [:]
 
     // Common parameters
     def col        = (cfg?.column ?: 'batch').toString().trim()

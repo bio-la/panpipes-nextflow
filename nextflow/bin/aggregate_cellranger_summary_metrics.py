@@ -58,26 +58,46 @@ def get_metrics_summary_path(path,sample_id=None):
         path (str):path to the folder called 'outs'
         sample_id (str): Required if path is to cellranger multi outputs, defaults to None
     """    
-    # subset path to only go up to 'outs'
-    if 'outs' not in path:
-        L.warning("You are parsing a cellranger output but your path to raw data doesn't end with the outs folder")
-        path = check_path(path)
+    # If a file was provided directly, just return it.
+    if os.path.isfile(path):
+        return path
+    p = os.path.normpath(path)
+    # Candidate base directories to try (order matters):
+    candidate_dirs = [p]
+    # If user passed .../outs already, also try the normalised 'outs' cut.
+    if 'outs' in p:
+        candidate_dirs.append(os.path.join(p.split('outs')[0], 'outs'))
     else:
-        path = path.split("outs")[0] + "outs"
-    outpath=None
-    # use the path to cellranger count or vdj outputs as default
-    if os.path.exists(os.path.join(path, 'metrics_summary.csv') ):
-        outpath = os.path.join(path, 'metrics_summary.csv') 
-    elif os.path.exists(os.path.join(path, 'summary.csv') ):
-        outpath = os.path.join(path, 'summary.csv') 
-    elif sample_id is not None and os.path.exists(os.path.join(path, 'per_sample_outs', sample_id, 'metrics_summary.csv') ):
-        outpath = os.path.join(path, 'per_sample_outs', sample_id, 'metrics_summary.csv')
-    elif sample_id is None and os.path.exists(os.path.join(path, 'per_sample_outs')):
-        L.warning('Input folder appears to be from cellranger multi but no sample_id is given')
-    else:
-        # use the alternative path from cellranger_multi outputs
-        L.warning('Path not found')
-    return outpath
+        # Also try appending 'outs' when user passed the parent dir.
+        candidate_dirs.append(os.path.join(p, 'outs'))
+
+    # Build candidate files to probe.
+    candidates = []
+    for d in candidate_dirs:
+        candidates.extend([
+            os.path.join(d, 'metrics_summary.csv'),
+            os.path.join(d, 'summary.csv'),
+        ])
+        if sample_id:
+            # Typical multi layouts
+            for sub in [('multi', sample_id), ('per_sample_outs', sample_id)]:
+                base = os.path.join(d, *sub)
+                candidates.extend([
+                    os.path.join(base, 'metrics_summary.csv'),
+                    os.path.join(base, 'summary.csv'),
+                ])
+    for f in candidates:
+        if os.path.exists(f):
+            return f
+
+    # (Keeps behavior minimal while avoiding hard failure on non-standard structures.)
+    for name in ('metrics_summary.csv', 'summary.csv'):
+        hits = glob.glob(os.path.join(p, '**', name), recursive=True)
+        if hits:
+            return hits[0]
+
+    L.warning("Path not found")
+    return None
 
 
 def detect_cellranger_algorithm(pth):
@@ -137,7 +157,8 @@ def parse_10x_cellranger_multi(path_df,path_col='metrics_summary_path'):
     ranger = {"library_or_sample":"category"}
     msums.rename(columns =ranger,inplace=True)
     # convert percentages from string to numeric
-    msums['metric_value'] = [re.sub(",|%", "", x) for x in msums['metric_value']]
+    #msums['metric_value'] = [re.sub(",|%", "", x) for x in msums['metric_value']]
+    msums['metric_value'] = [re.sub(",|%", "", str(x)) for x in msums['metric_value']]
     msums['metric_value'] = msums['metric_value'].astype(float)
     # sort outputs
     msums = msums.sort_values(['metric_name', 'sample_id'])
@@ -160,10 +181,12 @@ def parse_10x_cellranger_count(path_df, convert_df,  path_col='metrics_summary_p
     """   
     
     # read and concat
-    msums = pd.concat([pd.read_csv(f) for f in path_df[path_col]], 
+    msums = pd.concat([pd.read_csv(f,sep=None, engine='python', compression='infer')
+                    for f in path_df[path_col]], 
                     keys=[(x, y) for x, y in zip(path_df['sample_id'], 
                                                  path_df['path_type'])], #count
                     names=['sample_id','path_type'])
+
     msums = msums.stack().reset_index().drop(columns='level_2')
     # make the columns match the conversion df
     msums.columns = ['sample_id', 'library_type', 'count_metric_name', 'metric_value']
@@ -182,7 +205,7 @@ L.info("Reading in tsv file '%s'" % args.cellranger_column_conversion_df)
 convert_df = pd.read_csv(args.cellranger_column_conversion_df, sep='\t')   
 
 # get the paths
-pipe_df = pd.read_csv(args.pipe_df, sep='\t')
+pipe_df = pd.read_csv(args.pipe_df)
 L.info('Searching for all cellranger paths')
 all_paths_df = get_all_unique_paths(pipe_df)
 all_paths_df['metrics_summary_path'] = all_paths_df.apply(lambda x: get_metrics_summary_path(path=x.path, sample_id=x.sample_id), axis=1)
@@ -209,6 +232,7 @@ tenx_metrics_full.to_csv(args.output_file, index=False)
 # tenx_metrics['metric_value'] = tenx_metrics['metric_value'].astype(float)
 # split by library_type and metric_name 
 L.info("Plotting metrics for each library_type and metric_name")
+tenx_metrics_full = tenx_metrics_full.dropna(subset=['library_type', 'metric_name'])
 for idx, row in tenx_metrics_full[['library_type','metric_name']].drop_duplicates().iterrows():
     mn = row['metric_name']
     lt = row['library_type']

@@ -52,12 +52,62 @@ L.info("Running with params: %s", args)
 #  base_figure_dir='./')
 
 # ---------
+def ensure_obs_var(mdata, var):
+    """
+    Ensure a variable is accessible in mdata.obs.
+    Supports prefixed variables like 'rna:foo' by pulling from mdata['rna'].obs['foo'].
+    Returns True if the column exists/was created, False otherwise.
+    """
+    # Already present
+    if var in mdata.obs.columns:
+        return True
+
+    # Prefixed: modality:col
+    if ":" in var:
+        prefix, col = var.split(":", 1)
+        if prefix in getattr(mdata, "mod", {}):
+            ad = mdata[prefix]
+            # Common cases:
+            # - col exists as plain 'foo' in modality obs
+            if col in ad.obs.columns:
+                return True
+            # - sometimes the modality column is already stored with prefix in its own obs
+            if var in ad.obs.columns:
+                mdata.obs[var] = ad.obs.loc[mdata.obs_names, var].values
+                return True
+        L.warning("Variable '%s' not found (cannot pull into mdata.obs).", var)
+        return False
+
+    # Unprefixed var missing
+    L.warning("Variable '%s' not found in mdata.obs.", var)
+    return False
+
+def safe_categorize(mdata, vars_list):
+    """
+    Convert existing vars in mdata.obs to category; skip missing.
+    """
+    ok = []
+    for v in vars_list:
+        if ensure_obs_var(mdata, v):
+            ok.append(v)
+    if ok:
+        mdata.obs[ok] = mdata.obs[ok].apply(lambda x: x.astype("category"))
+    return ok
+
+
+
 def main(adata, mod, plot_features,  basis, fig_suffix):
     # define file name
     fname_prefix = "_".join(["_" + mod,  fig_suffix])
     # get features
     sc.settings.figdir  = os.path.join(args.base_figure_dir, mod)
+    #plot_features = [pf for pf in plot_features if pf in mdata.obs.columns]
+    # make sure features exist in mdata.obs (may be pulled from modality obs)
+    plot_features = [pf for pf in plot_features if ensure_obs_var(mdata, pf)]
     plot_features = [pf for pf in plot_features if pf in mdata.obs.columns]
+    if len(plot_features) == 0:
+        L.warning("No valid variables to plot for mod=%s; skipping.", mod)
+        return
     pointsize = 120000 / adata.shape[0]
     L.info("Plotting embedding %s for modality %s coloured by %s" % (basis, mod, plot_features))
     mu.pl.embedding(adata, basis=basis, color=plot_features, size=pointsize, save = fname_prefix + ".png")
@@ -75,7 +125,8 @@ if args.categorical_variables is not None:
     
     uniq_discrete = list(set(chain(*cat_vars.values())))
     # make sure they are categories
-    mdata.obs[uniq_discrete] = mdata.obs[uniq_discrete].apply(lambda x: x. astype('category'))
+    #mdata.obs[uniq_discrete] = mdata.obs[uniq_discrete].apply(lambda x: x. astype('category'))
+    safe_categorize(mdata, uniq_discrete)
 else:
     L.warning("No categorical variables were provided")
     cat_vars = {}
@@ -112,7 +163,16 @@ for mod in ['rna', 'prot', 'atac', 'multimodal']:
     params_dict['fig_suffix'] = args.fig_suffix
     if len(basis_list) > 0:
         for basis in basis_list:
-            main(adata=mdata, basis = mod + ":" + basis, **params_dict)
+           #main(adata=mdata, basis = mod + ":" + basis, **params_dict)
+            if mod in getattr(mdata, "mod", {}):
+                available = set(mdata[mod].obsm_keys())
+                if basis not in available:
+                    L.warning(
+                        "Basis '%s' not found in mdata['%s'].obsm; skipping. Available: %s",
+                        basis, mod, list(available)
+                    )
+                    continue
+            main(adata=mdata, basis=mod + ":" + basis, **params_dict)
 
 
 

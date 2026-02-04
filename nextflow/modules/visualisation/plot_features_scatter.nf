@@ -5,7 +5,7 @@ nextflow.enable.dsl=2
 process plot_feature_scatters {
     tag "$sample_id:${file(scatters_csv).baseName}"
     conda '/Users/mylenemarianagonzalesandre/miniconda3/envs/spatial-transcriptomics'
-    publishDir "${params.outdir}/${params.mode}/visualisation", mode: 'copy', overwrite: true, pattern: 'scatters/*'
+    publishDir "${params.visualisation.outdir}/${params.visualisation.mode}/visualisation", mode: 'copy', overwrite: true, pattern: 'scatters/*'
 
     
     input:

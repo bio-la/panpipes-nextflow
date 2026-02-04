@@ -4,7 +4,7 @@ nextflow.enable.dsl=2
 process run_filter {
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/${params.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.preprocess.outdir}/${params.preprocess.mode}/preprocess/filter", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
 
     input:
     tuple val(sample_id), path (mdata_in), val (prefix), val (filter_map), val (intersect_mods), val (keep_barcodes_path)

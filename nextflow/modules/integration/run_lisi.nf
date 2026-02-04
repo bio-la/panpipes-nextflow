@@ -4,9 +4,9 @@ nextflow.enable.dsl=2
 process run_lisi {
     tag "$sample_id"
 
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'LISI/**/LISI_scores.png', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'LISI/**/LISI_scores.csv', saveAs: { file -> file }
-    publishDir "${params.outdir}/${params.mode}/integration",mode: 'copy',overwrite: true, pattern: 'logs/run_lisi.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'LISI/**/LISI_scores.png', saveAs: { file -> file }
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'LISI/**/LISI_scores.csv', saveAs: { file -> file }
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration",mode: 'copy',overwrite: true, pattern: 'logs/run_lisi.log'
 
     
     input:

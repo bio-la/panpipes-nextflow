@@ -358,6 +358,11 @@ def run_scrublet(infile, outfile, sample_id):
         --inputpath %(infile)s
         --outdir %(outdir)s
         """
+    if PARAMS['scr_per_sample']:
+        if PARAMS['scr_expected_doublet_rate_csv'] is None:
+            raise ValueError("scr.per_sample is True but scr.expected_doublet_rate_csv is not specified in pipeline.yml")
+        cmd += " --expected_doublet_rate_csv %(scr_expected_doublet_rate_csv)s"
+    # always pass the default expected doublet rate, the python script will prioritize the csv if it exists
     if PARAMS['scr_expected_doublet_rate'] is not None:
         cmd += " --expected_doublet_rate %(scr_expected_doublet_rate)s"
     if PARAMS['scr_sim_doublet_ratio'] is not None:

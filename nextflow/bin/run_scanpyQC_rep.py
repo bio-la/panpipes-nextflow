@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 scanpy QC script RNA
 order of QC:
@@ -86,7 +87,29 @@ ir.tl.define_clonotypes(rep, **clonotype_args)
 L.info("Adding column to obs recording which clonotypes are expanded")
 ir.tl.clonal_expansion(rep)
 
-    
+
+# Debugging for rep
+L.info("Debugging repertoire AnnData:")
+L.info("rep.obs columns:", list(rep.obs.columns)[:80])
+L.info("rep.obsm keys:", list(rep.obsm.keys()))
+
+# Patch for Scirpy changes
+if 'has_ir' not in rep.obs.columns:
+
+    # scirpy usually creates receptor_type; use it if available
+    if 'receptor_type' in rep.obs.columns:
+        rep.obs['has_ir'] = rep.obs['receptor_type'].astype(str).ne('nan') & rep.obs['receptor_type'].astype(str).ne('None') & rep.obs['receptor_type'].astype(str).ne('')
+    else:
+        # fallback: if scirpy created per-cell chain QC columns, use any of them
+        chain_cols = [c for c in rep.obs.columns if c.startswith('has_') and c.lower() in ('has_tcr', 'has_bcr')]
+        if chain_cols:
+            rep.obs['has_ir'] = rep.obs[chain_cols].any(axis=1)
+        else:
+            # last resort: assume False (script should still run, just less informative)
+            rep.obs['has_ir'] = False
+
+    rep.obs['has_ir'] = rep.obs['has_ir'].astype('category')
+
 category_cols = ['has_ir']
 for cc in category_cols:
     if pd.api.types.infer_dtype(rep.obs[cc]) != "categorical":
@@ -139,9 +162,9 @@ if tcr is not None:
 
 
 mdata.update()
-L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_cell_metadata.tsv")
+L.info("Saving updated obs in a metadata tsv file to ./" + args.sampleprefix + "_rep_cell_metadata.tsv")
 write_obs(mdata, output_prefix=args.sampleprefix, 
-    output_suffix="_cell_metadata.tsv")
+    output_suffix="_rep_cell_metadata.tsv")
 L.info("Saving updated MuData to '%s'" % args.output_mudata)
 mdata.write(args.output_mudata)
 

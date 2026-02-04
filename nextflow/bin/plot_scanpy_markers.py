@@ -77,6 +77,11 @@ def calc_dendrogram(adata, group_col):
 
 
 def do_plots(adata, mod, group_col, mf, n=10, layer=None):
+    # Extra lines - fix for layers
+    layer_use = resolve_layer(adata, layer)
+    L.info("Using layer=%s for plotting (requested=%s)",
+        "X" if layer_use is None else layer_use, layer)
+    
     # get markers for plotting
     L.info("Subsetting on markers with avg logFC > 0")
     mf = mf[mf['avg_logFC'] > 0]
@@ -91,7 +96,8 @@ def do_plots(adata, mod, group_col, mf, n=10, layer=None):
     sc.pl.stacked_violin(adata,
                 marker_list,
                 groupby=group_col,
-                layer=layer,
+                #layer=layer,
+                layer=layer_use,
                 save = args.sample_id+ "_"+ group_col + '_top_markers_'+ mod +'.png',
                 dendrogram=incl_dendrogram,
                 # figsize=(24, 5)
@@ -119,6 +125,20 @@ def do_plots(adata, mod, group_col, mf, n=10, layer=None):
                 # figsize=(24, 5)
                 )
 
+def resolve_layer(adata, requested_layer):
+    """Return a valid AnnData layer name or None (meaning: use .X)."""
+    if requested_layer is None:
+        return None
+    req = str(requested_layer).strip()
+    if req == "" or req.lower() in {"none", "x"}:
+        return None
+    if req not in adata.layers.keys():
+        L.warning(
+            "Requested layer '%s' not found. Available layers: %s. Falling back to adata.X.",
+            req, list(adata.layers.keys())
+        )
+        return None
+    return req
 
 # read data
 if args.modality != "spatial":
@@ -139,7 +159,13 @@ else:
     adata = sd.read_zarr(args.infile)["table"]
     splitted_group_col = args.group_col.split("-")
     args.group_col = splitted_group_col[0] + "_res_" + splitted_group_col[1]
- 
+
+layer_use = resolve_layer(adata, args.layer)
+L.info(
+    "Using layer=%s for plotting (requested=%s)",
+    "X" if layer_use is None else layer_use,
+    args.layer
+)
 
 L.info("Loading marker information from '%s'" % args.marker_file)
 mf = pd.read_csv(args.marker_file, sep='\t' )

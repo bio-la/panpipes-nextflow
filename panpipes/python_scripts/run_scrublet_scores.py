@@ -35,6 +35,9 @@ parser.add_argument("--outdir",
 parser.add_argument("--expected_doublet_rate",
                     default=0.06,
                     help="the expected fraction of transcriptomes that are doublets, typically 0.05-0.1. Results are not particularly sensitive to this parameter")
+parser.add_argument("--expected_doublet_rate_csv",
+                    default=None,
+                    help="Path to a CSV file with 'sample_id' and 'expected_doublet_rate' columns for sample-specific rates.")
 parser.add_argument("--sim_doublet_ratio",
                     default=2,
                     help="the number of doublets to simulate, relative to the number of observed transcriptomes. Setting too high is computationally expensive. Min tested 0.5")
@@ -68,15 +71,37 @@ input = args.inputpath + "/rna"
 L.info("Reading in data from '%s'" % input)
 adata = mu.read(args.inputpath + "/rna")
 
+# Determine the expected doublet rate. Start with the default.
+expected_doublet_rate = float(args.expected_doublet_rate)
 
+# If a CSV is provided, try to find a sample-specific rate.
+if args.expected_doublet_rate_csv is not None and os.path.exists(args.expected_doublet_rate_csv):
+    L.info("Reading sample-specific doublet rates from %s", args.expected_doublet_rate_csv)
+    try:
+        rates_df = pd.read_csv(args.expected_doublet_rate_csv)
+        if not all(col in rates_df.columns for col in ['sample_id', 'expected_doublet_rate']):
+            raise ValueError("CSV must contain 'sample_id' and 'expected_doublet_rate' columns.")
+
+        sample_rate_series = rates_df.loc[rates_df['sample_id'] == args.sample_id, 'expected_doublet_rate']
+
+        if sample_rate_series.empty:
+            L.warning("sample_id '%s' not found in %s. Falling back to default rate %f", args.sample_id, args.expected_doublet_rate_csv, expected_doublet_rate)
+        else:
+            expected_doublet_rate = float(sample_rate_series.iloc[0])
+            L.info("Using sample-specific expected_doublet_rate %f for sample %s", expected_doublet_rate, args.sample_id)
+            
+    except Exception as e:
+        L.error("Failed to read or parse expected doublet rate from CSV: %s. Falling back to default rate %f.", e, expected_doublet_rate)
+else:
+    L.info("Using default expected_doublet_rate: %f", expected_doublet_rate)
 
 counts_matrix = adata.X
 L.info('Counts matrix shape: {} rows, {} columns'.format(counts_matrix.shape[0], counts_matrix.shape[1]))
 L.info('Number of genes in gene list: {}'.format(len(adata.var_names)))
 
-L.info("Initializing the scrublet object with expected_doublet_rate: %s" % args.expected_doublet_rate)
+L.info("Initializing the scrublet object with expected_doublet_rate: %s" % expected_doublet_rate)
 
-scrub = scr.Scrublet(counts_matrix, expected_doublet_rate=float(args.expected_doublet_rate))
+scrub = scr.Scrublet(counts_matrix, expected_doublet_rate=expected_doublet_rate)
 L.info("Predicting doublets with params: \nmincells: %s \nmingenes: %s \nmin_gene_variabilty_pctl: %s\nn_prin_comps: %s\n" % (args.min_counts, args.min_cells, args.min_gene_variability_pctl, args.n_prin_comps))
 L.info("Predicting using:\n")
 

@@ -43,11 +43,28 @@ if args.clusters_or_markers == "clusters":
     # get colnames
     cnames = []
     for f in infiles:
-        filename = os.path.basename(f).split("-")      
-        alg = filename[2]
-        res = filename[3]
-        mod = filename[0]
-        cnames.append(mod + "_" + alg + '_res_' + str(res))
+        # filename = os.path.basename(f).split("-")      
+        # alg = filename[2]
+        # res = filename[3]
+        # mod = filename[0]
+        # cnames.append(mod + "_" + alg + '_res_' + str(res))
+        base = os.path.basename(f)
+
+        # robust parse: modality - sample (can contain '-') - algorithm - resolution - clusters.txt(.gz)
+        m = re.match(
+            r'^(?P<mod>[^-]+)-(?P<sample>.+)-(?P<alg>[^-]+)-(?P<res>[^-]+)-clusters\.txt(\.gz)?$',
+            base
+        )
+        if not m:
+            raise ValueError(f"Unrecognized cluster filename pattern: {base}")
+
+        # keep original var names used below
+        filename = base  # keep var name alive (was list before, now string; not used elsewhere)
+        alg = m.group('alg')
+        res = m.group('res')
+        mod = m.group('mod')
+
+        cnames.append(mod + "_" + alg + "_res_" + str(res))
     L.info(cnames)
     L.info("Saving combined cluster columns to tsv file '%s'" % args.output_file)
     combined_csv.to_csv("clusters/" + args.output_file, sep='\t', header=cnames, index=True)

@@ -84,29 +84,68 @@ def get_header():
         markers_columns = ['cluster', 'gene', 'scores', 'avg_logFC', 'pvals', 'p.adj.bonferroni']
     return markers_columns
 
+# helper method
+def resolve_layer(adata, layer):
+    """
+    Return a safe layer name to use downstream.
+    - If layer is None/"None"/""/"X": None (use adata.X)
+    - If requested layer not present : None (use adata.X)
+    """
+    if layer is None:
+        return None
+    layer_str = str(layer).strip()
+    if layer_str.lower() in {"none", "", "x"}:
+        return None
+    if layer_str not in adata.layers.keys():
+        L.warning(
+            "Requested layer '%s' not found. Available layers: %s. Falling back to adata.X.",
+            layer_str, list(adata.layers.keys())
+        )
+        return None
+
+    return layer_str
 
 def filter_zero_count_genes(adata, layer=None):
     L.info("Removing zero count genes")
     if layer is None:
-        if issparse(adata.X):
-            bool_list = (adata.X.sum(axis=0) > 0).tolist()[0]
-        else:
-            bool_list = (adata.X.sum(axis=0) > 0).tolist()
+        mat = adata.X
+        layer_used = "X"
     else:
-        if issparse(adata.layers[layer]):
-            bool_list = (adata.layers[layer].sum(axis=0) > 0).tolist()[0]
-        else:
-            bool_list = (adata.layers[layer].sum(axis=0) > 0).tolist()
-    adata = adata[:, bool_list]
+        mat = adata.layers[layer]
+        layer_used = layer
+    if issparse(mat):
+        gene_sums = np.asarray(mat.sum(axis=0)).ravel()
+    else:
+        gene_sums = np.asarray(mat).sum(axis=0)
+
+    keep = gene_sums > 0
+    n_drop = int((~keep).sum())
+    if n_drop > 0:
+        L.info("Dropping %d zero-count genes using layer=%s", n_drop, layer_used)
+    # Modifies adata in-place, this method is the official AnnData API - updated package
+    adata._inplace_subset_var(keep)
+    # if layer is None:
+    #     if issparse(adata.X):
+    #         bool_list = (adata.X.sum(axis=0) > 0).tolist()[0]
+    #     else:
+    #         bool_list = (adata.X.sum(axis=0) > 0).tolist()
+    # else:
+    # [0] indexing silently assumes 2D row vector
+    #     if issparse(adata.layers[layer]):
+    #         bool_list = (adata.layers[layer].sum(axis=0) > 0).tolist()[0]
+    #     else:
+    #         bool_list = (adata.layers[layer].sum(axis=0) > 0).tolist()
+    # If the caller expects adata to be modified, that may not happen reliably.
+    # adata = adata[:, bool_list]
     L.debug(adata.shape)
 
 
 def run_clustering(adata, 
-                   cluster_col=None, 
-                   cluster_groups='all', 
-                   layer=None, 
-                   methoduse=None, 
-                   pseudo_seurat=False):
+                    cluster_col=None, 
+                    cluster_groups='all', 
+                    layer=None, 
+                    methoduse=None, 
+                    pseudo_seurat=False):
     if type(cluster_groups) is list:
         # make sure the clusters are strings else rank_gene_groups crashes
         cluster_groups = [str(x) for x in cluster_groups]
@@ -140,13 +179,13 @@ def run_clustering(adata,
 
 
 def main(adata, 
-         cluster_file,
-         mod, 
-         mincells=None,
-         layer=None,
-         testuse=None,
-         pseudo_seurat=False,
-         output_file_prefix="markers") :
+            cluster_file,
+            mod, 
+            mincells=None,
+            layer=None,
+            testuse=None,
+            pseudo_seurat=False,
+            output_file_prefix="markers") :
     # check the X slot actually contains data
     if adata.X.shape[1] == 0:
         L.error(".X does not contain any values")
@@ -155,6 +194,8 @@ def main(adata,
     check_log1p_dict(adata)
     # load clusters
     load_and_merge_clusters(adata, cluster_file)
+    # Fix: resolve layer once so both filtering and ranking use same safe layer
+    layer = resolve_layer(adata, layer)
     # filter out genes with zero counts
     filter_zero_count_genes(adata, layer=layer)
     # filter out clusters with less than min cells
@@ -166,9 +207,11 @@ def main(adata,
             clust_vals = list(set(min_cell_df[min_cell_df >= mincells].index))
         else:
             clust_vals = list(set(adata.obs["clusters"]))
+    else:
+        clust_vals = list(set(adata.obs["clusters"]))
     all_markers, all_filter_stats = run_clustering(adata,
-                                                   cluster_groups=clust_vals,
-                                                   cluster_col="clusters",
+                                                    cluster_groups=clust_vals,
+                                                    cluster_col="clusters",
                                         layer=layer, 
                                         methoduse=testuse, 
                                         pseudo_seurat=pseudo_seurat)
@@ -219,7 +262,16 @@ else:
     L.info("Reading in SpatialData from '%s'" % args.infile)
     adata = sd.read_zarr(args.infile)["table"]
     os.makedirs("markers", exist_ok=True)
-        
+
+
+#Fix
+layer_use = resolve_layer(adata, args.layer)
+L.info(
+    "Using layer=%s for plotting (requested=%s)",
+    "X" if layer_use is None else layer_use,
+    args.layer
+)
+
 
 main(adata, 
      mod=args.modality,

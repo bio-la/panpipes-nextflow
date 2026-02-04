@@ -3,12 +3,12 @@ nextflow.enable.dsl=2
 
 process run_clustree { 
     tag "$sample"
-    publishDir "$params.outdir_path", mode: 'copy', pattern: "figures/clustree_*.png"
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/7-plot_clustree.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern: "figures/clustree_*.png"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/7-plot_clustree.log"
     
 
     input:
-        path(input_csv)
+        tuple val (sample), path (input_csv)
 
     output:
         path "figures/clustree_*.png"

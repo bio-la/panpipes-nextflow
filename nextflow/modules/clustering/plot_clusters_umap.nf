@@ -3,8 +3,8 @@ nextflow.enable.dsl=2
 
 process plot_umap {
     tag "$sample"   
-    publishDir "$params.outdir_path", mode: 'copy', pattern: "figures/*/*.png"
-    publishDir "$params.outdir_path", mode: 'copy', overwrite: true, pattern: "logs/6-$sample-plot_umap.log"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', pattern: "figures/*/*.png"
+    publishDir "$params.clustering.outdir/${params.clustering.mode}/clustering", mode: 'copy', overwrite: true, pattern: "logs/6-$sample-plot_umap.log"
     
 
     input:

@@ -78,11 +78,24 @@ for modality in modalities:
 
 if args.umap_files_csv != "None": 
     L.info("Adding UMAP coordinates to MuData") 
+    # split on any whitespace
+    umap_files = re.split(r"\s+", args.umap_files_csv.strip())
     for umap_path in umap_files: 
-        modality = umap_path.split('-')[1]
+        if not umap_path:
+            continue
+        fname = os.path.basename(umap_path)
+        parts = fname.split('-')
+
+        if len(parts) < 4:
+            raise ValueError(f"Unexpected UMAP filename format: {fname}")
+        modality = parts[-3] # rna / atac
+        min_dist  = parts[-2] # 0.5
+        #modality = umap_path.split('-')[1]
+        
         uf_df = pd.read_csv(umap_path, sep='\t', index_col=0) 
-        min_dist = os.path.basename(umap_path).split("-")[2]  
+        #min_dist = os.path.basename(umap_path).split("-")[2]  
         new_key = "X_umap_mindist_" + min_dist
+
         if modality != "multimodal": 
             if all(mdata[modality].obs_names == uf_df.index):
                 mdata[modality].obsm[new_key] =  uf_df.to_numpy()
@@ -94,8 +107,8 @@ if args.umap_files_csv != "None":
                 uf_df = uf_df.loc[mdata.obs_names,:]
                 mdata.obsm[new_key] =  uf_df.to_numpy()
             else:
-                L.warning("Cannot integrate %s into mdata as obs_names mismatch" % uf.iloc[i,:] )
-
+                #L.warning("Cannot integrate %s into mdata as obs_names mismatch" % uf.iloc[i,:] )
+                L.warning("Cannot integrate %s into mdata as obs_names mismatch" % umap_path)
 
     
 L.info("Saving updated MuData to '%s'" % args.output_mudata)

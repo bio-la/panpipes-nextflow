@@ -4,9 +4,9 @@ nextflow.enable.dsl=2
 process batch_correct_mofa {
 
     tag "${sample_id}"
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
-    publishDir "${params.outdir}/${params.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'batch_correction/*.csv'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'logs/*.log'
+    publishDir "${params.integration.outdir}/${params.integration.mode}/integration", mode: 'copy', overwrite: true, pattern: 'tmp/*.h5mu'
 
 
     
@@ -20,8 +20,8 @@ process batch_correct_mofa {
 
     script:
 
-    def mm      = params.multimodal ?: [:]
-    def mofaCfg = (params.multimodal?.mofa ?: [:]) as Map
+    def mm      = params.integration.multimodal ?: [:]
+    def mofaCfg = (params.integration.multimodal?.mofa ?: [:]) as Map
 
     // neighbors: prefer tool-specific, then global, then defaults
     def neigh = (mofaCfg.neighbors ?: mm.neighbors ?: [:]) as Map

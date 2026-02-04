@@ -18,24 +18,30 @@ include {batch_correct_merge} from '../modules/integration/batch_correct_merge.n
 
 workflow integration {
 
+  take:
+    preprocessed_obj
+
   main:
+    
+     // Helpers
+    def sid_from = { m -> params.integration.sample_prefix ?: (params.integration.sample_id ?: file(m).baseName) }
+    
+    def toList   = { x -> x instanceof List ? x : x?.toString()?.split(',')*.trim().findAll{ it } ?: [] }
     
     //Get the data
     
-    Channel
-      .fromPath(params.preprocessed_obj)
-      .set { ch_mdata }
+    def ch_sid_mdata = preprocessed_obj.map { it ->
+      (it instanceof List && it.size() >= 2)
+        ? tuple(it[0].toString(), it[1])
+        : tuple(sid_from(it), it)
+    }
 
-    // Helpers
-    def sid_from = { m -> params.sample_prefix ?: (params.sample_id ?: file(m).baseName) }
-    def toList   = { x -> x instanceof List ? x : x?.toString()?.split(',')*.trim().findAll{ it } ?: [] }
-    
-    def ch_sid_mdata = ch_mdata.map { m -> tuple( sid_from(m), m ) }   // (sid, base.h5mu)
+    ch_mdata = ch_sid_mdata.map { sid, mdata -> mdata }
 
      //  config with or without final_obj
-    def CFG = params.containsKey('final_obj')
-                ? params.final_obj
-                : ( params.containsKey('integration')
+    def CFG = params.integration.containsKey('final_obj')
+                ? params.integration.final_obj
+                : ( params.integration.containsKey('integration')
                       ? ( params.integration instanceof Map && params.integration.containsKey('final_obj')
                             ? params.integration.final_obj
                             : params.integration )
@@ -66,53 +72,53 @@ workflow integration {
     //batch correct none
     // just get the sample id and the data path
     // RNA/ATAC or Prot no batch correction
-    def ch_none_rna  = params.rna?.run  ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
-    def ch_none_prot = params.prot?.run ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
-    def ch_none_atac = params.atac?.run ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
+    def ch_none_rna  = params.integration.rna?.run  ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
+    def ch_none_prot = params.integration.prot?.run ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
+    def ch_none_atac = params.integration.atac?.run ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
     def ch_none_all  = ch_none_rna.mix(ch_none_prot).mix(ch_none_atac)
 
     batch_correct_none(ch_none_all)
 
     // batch correct bbknn
 
-    def ch_jobs_bbknn_rna  = hasTool(params.rna,  'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
-    def ch_jobs_bbknn_prot = hasTool(params.prot, 'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
-    def ch_jobs_bbknn_atac = hasTool(params.atac, 'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
+    def ch_jobs_bbknn_rna  = hasTool(params.integration.rna,  'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
+    def ch_jobs_bbknn_prot = hasTool(params.integration.prot, 'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
+    def ch_jobs_bbknn_atac = hasTool(params.integration.atac, 'bbknn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
     def ch_jobs_bbknn = ch_jobs_bbknn_rna.mix(ch_jobs_bbknn_prot).mix(ch_jobs_bbknn_atac)
     
     batch_correct_bbknn(ch_jobs_bbknn)
 
 
     //batch correct harmony
-    def ch_jobs_harmony_rna  = hasTool(params.rna,  'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
-    def ch_jobs_harmony_prot = hasTool(params.prot, 'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
-    def ch_jobs_harmony_atac = hasTool(params.atac, 'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
+    def ch_jobs_harmony_rna  = hasTool(params.integration.rna,  'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna')  } : Channel.empty()
+    def ch_jobs_harmony_prot = hasTool(params.integration.prot, 'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'prot') } : Channel.empty()
+    def ch_jobs_harmony_atac = hasTool(params.integration.atac, 'harmony') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'atac') } : Channel.empty()
     def ch_jobs_harmony      = ch_jobs_harmony_rna.mix(ch_jobs_harmony_prot).mix(ch_jobs_harmony_atac)
     batch_correct_harmony(ch_jobs_harmony)
 
     // Scanorama RNA only
-    def ch_jobs_scanorama = hasTool(params.rna, 'scanorama') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna') } : Channel.empty()
+    def ch_jobs_scanorama = hasTool(params.integration.rna, 'scanorama') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'rna') } : Channel.empty()
     batch_correct_scanorama(ch_jobs_scanorama)
 
     //scvi RNA only
-    def ch_jobs_scvi = hasTool(params.rna, 'scvi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'rna') } : Channel.empty()
+    def ch_jobs_scvi = hasTool(params.integration.rna, 'scvi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'rna') } : Channel.empty()
     batch_correct_scvi(ch_jobs_scvi)
 
     // Multimodal 
     // totalVI
-    def ch_jobs_totalvi = hasTool(params.multimodal, 'totalvi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
+    def ch_jobs_totalvi = hasTool(params.integration.multimodal, 'totalvi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
     batch_correct_totalvi(ch_jobs_totalvi)
 
     // MultiVI
-    def ch_jobs_multivi = hasTool(params.multimodal, 'multivi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
+    def ch_jobs_multivi = hasTool(params.integration.multimodal, 'multivi') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
     batch_correct_multivi(ch_jobs_multivi)
 
     // MOFA
-    def ch_jobs_mofa = hasTool(params.multimodal, 'mofa') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
+    def ch_jobs_mofa = hasTool(params.integration.multimodal, 'mofa') ? ch_mdata.map { m -> tuple(sid_from(m), m,'multimodal') } : Channel.empty()
     batch_correct_mofa(ch_jobs_mofa)
 
     // WNN
-    def ch_jobs_wnn = hasTool(params.multimodal, 'wnn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'multimodal') } : Channel.empty()
+    def ch_jobs_wnn = hasTool(params.integration.multimodal, 'wnn') ? ch_mdata.map { m -> tuple(sid_from(m), m, 'multimodal') } : Channel.empty()
     batch_correct_wnn(ch_jobs_wnn)
 
     // Collate UMAPs
@@ -143,7 +149,7 @@ workflow integration {
     collate_umaps( ch_for_collate )
 
     // Plot UMAPS
-    def sid_const = params.sample_prefix ?: (params.sample_id ?: 'sample')
+    def sid_const = params.integration.sample_prefix ?: (params.integration.sample_id ?: 'sample')
 
     def ch_cell   = collate_umaps.out.cell_metadata_csv.map { p -> tuple(sid_const, p) }
     def ch_umaps  = collate_umaps.out.combined_umaps_tsv.map { p -> tuple(sid_const, p) }
@@ -160,7 +166,7 @@ workflow integration {
     plot_umaps_batch_correct( ch_plot_in )
 
     // Run LISI
-    def do_lisi   = params.lisi_run instanceof Boolean ? params.lisi_run : true
+    def do_lisi   = params.integration.lisi_run instanceof Boolean ? params.integration.lisi_run : true
     def ch_lisi_in = do_lisi ? ch_plot_in : Channel.empty()
 
     run_lisi( ch_lisi_in )
@@ -372,4 +378,25 @@ workflow integration {
     merged_obj = batch_correct_merge.out.mudata_out
     merge_log  = batch_correct_merge.out.log
 
+}
+
+workflow integration_standalone {
+
+  main:
+    //def ch_in = Channel.fromPath(params.integration.preprocessed_obj)
+    
+    main:
+    def ch_mdata = Channel
+        .fromPath(params.integration.preprocessed_obj)
+        .map { m -> tuple(sid_from(m), m) }
+
+    integration(ch_in)
+
+  emit:
+    umaps        = integration.out.umaps
+    cell_meta    = integration.out.cell_meta
+    batch_yml    = integration.out.batch_yml
+    scib         = integration.out.scib
+    lisi         = integration.out.lisi
+    final_obj    = integration.out.final_obj
 }
